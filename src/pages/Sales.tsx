@@ -8,18 +8,7 @@ export default function Sales() {
   return (
     <ErpLayout>
       <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Sales Overview</h1>
-          <p className="text-muted-foreground">Monitor your sales performance and activities</p>
-        </div>
-        <Button className="bg-gradient-primary hover:bg-gradient-primary/90">
-          <Plus className="h-4 w-4 mr-2" />
-          New Sale
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
