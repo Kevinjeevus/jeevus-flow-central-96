@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Search, Filter, Receipt } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { SaleReturnForm } from "@/components/SaleReturnForm";
+import { ErpLayout } from "@/components/ErpLayout";
 
 export default function SaleReturn() {
   const [showReturnForm, setShowReturnForm] = useState(false);
@@ -14,6 +15,7 @@ export default function SaleReturn() {
   }
 
   return (
+    <ErpLayout>
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -62,5 +64,6 @@ export default function SaleReturn() {
           </CardContent>
         </Card>
       </div>
+    </ErpLayout>
   );
 }

@@ -12,6 +12,7 @@ import { CustomerForm } from "@/components/CustomerForm";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
+import { ErpLayout } from "@/components/ErpLayout";
 
 interface Invoice {
   id: string;
@@ -173,8 +174,8 @@ export default function SaleInvoices() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <ErpLayout>
+      <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex flex-col space-y-4">
           <div>
@@ -532,6 +533,6 @@ export default function SaleInvoices() {
           )}
         </div>
       </div>
-    </div>
+    </ErpLayout>
   );
 }

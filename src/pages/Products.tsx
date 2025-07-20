@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { ErpLayout } from "@/components/ErpLayout";
 
 interface Product {
   id: string;
@@ -228,7 +229,8 @@ export default function Products() {
   const totalValue = products.reduce((sum, p) => sum + (p.stock_quantity * p.purchase_price), 0);
 
   return (
-    <div className="flex-1 space-y-6 p-6">
+    <ErpLayout>
+      <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Products</h1>
@@ -697,6 +699,7 @@ export default function Products() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </ErpLayout>
   );
 }

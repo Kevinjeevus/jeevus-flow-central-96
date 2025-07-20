@@ -2,10 +2,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Plus, Search, Filter, TrendingUp, DollarSign, FileText, ShoppingCart } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { ErpLayout } from "@/components/ErpLayout";
 
 export default function Sales() {
   return (
-    <div className="p-6">
+    <ErpLayout>
+      <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Sales Overview</h1>
@@ -83,6 +85,7 @@ export default function Sales() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </ErpLayout>
   );
 }

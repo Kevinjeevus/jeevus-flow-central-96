@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Search, Filter, Package } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { DeliveryChallanForm } from "@/components/DeliveryChallanForm";
+import { ErpLayout } from "@/components/ErpLayout";
 
 export default function DeliveryChallan() {
   const [showChallanForm, setShowChallanForm] = useState(false);
@@ -14,6 +15,7 @@ export default function DeliveryChallan() {
   }
 
   return (
+    <ErpLayout>
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -62,5 +64,6 @@ export default function DeliveryChallan() {
           </CardContent>
         </Card>
       </div>
+    </ErpLayout>
   );
 }
