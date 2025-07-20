@@ -1,0 +1,121 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* JEEVUS ERP Design System - Professional Business Theme */
+
+@layer base {
+  :root {
+    /* Core Business Colors */
+    --background: 0 0% 98%;
+    --foreground: 222 84% 5%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 84% 5%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 84% 5%;
+
+    /* Primary Brand - Professional Blue */
+    --primary: 217 91% 20%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 217 91% 35%;
+    --primary-dark: 217 91% 15%;
+
+    /* Secondary - Clean Gray */
+    --secondary: 210 20% 96%;
+    --secondary-foreground: 222 47% 11%;
+
+    /* Muted - Subtle Background */
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    /* Accent - Business Highlight */
+    --accent: 142 76% 36%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Status Colors */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* UI Elements */
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 217 91% 20%;
+
+    --radius: 0.5rem;
+
+    /* Business Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-light)));
+    --gradient-accent: linear-gradient(135deg, hsl(var(--accent)), hsl(142 76% 46%));
+    --gradient-card: linear-gradient(180deg, hsl(var(--card)), hsl(var(--muted)));
+
+    /* Shadows */
+    --shadow-business: 0 4px 20px hsl(var(--primary) / 0.08);
+    --shadow-card: 0 2px 12px hsl(var(--foreground) / 0.04);
+
+    /* Sidebar ERP Theme */
+    --sidebar-background: 217 91% 18%;
+    --sidebar-foreground: 0 0% 96%;
+    --sidebar-primary: 217 91% 35%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 217 91% 25%;
+    --sidebar-accent-foreground: 0 0% 96%;
+    --sidebar-border: 217 91% 25%;
+    --sidebar-ring: 217 91% 35%;
+  }
+
+  .dark {
+    /* Dark theme for business use */
+    --background: 222 84% 5%;
+    --foreground: 210 40% 98%;
+
+    --card: 217 32% 17%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 217 32% 17%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 217 91% 35%;
+    --primary-foreground: 222 47% 11%;
+
+    --secondary: 217 32% 20%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 32% 17%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 142 76% 36%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217 32% 17%;
+    --input: 217 32% 17%;
+    --ring: 217 91% 35%;
+
+    --sidebar-background: 217 91% 15%;
+    --sidebar-foreground: 240 5% 96%;
+    --sidebar-primary: 217 91% 35%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 217 32% 20%;
+    --sidebar-accent-foreground: 240 5% 96%;
+    --sidebar-border: 217 32% 20%;
+    --sidebar-ring: 217 91% 35%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}

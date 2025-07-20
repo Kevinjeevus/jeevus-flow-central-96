@@ -1,0 +1,66 @@
+
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Plus, Search, Filter, Receipt } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { SaleReturnForm } from "@/components/SaleReturnForm";
+
+export default function SaleReturn() {
+  const [showReturnForm, setShowReturnForm] = useState(false);
+
+  if (showReturnForm) {
+    return <SaleReturnForm onClose={() => setShowReturnForm(false)} />;
+  }
+
+  return (
+      <div className="p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Sale Return / Credit Note</h1>
+            <p className="text-muted-foreground">Handle returns and credit adjustments</p>
+          </div>
+          <Button 
+            className="bg-gradient-primary hover:bg-gradient-primary/90"
+            onClick={() => setShowReturnForm(true)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create Return
+          </Button>
+        </div>
+
+        <div className="flex items-center gap-4 mb-6">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input 
+              placeholder="Search returns..." 
+              className="pl-10"
+            />
+          </div>
+          <Button variant="outline">
+            <Filter className="h-4 w-4 mr-2" />
+            Filter
+          </Button>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Receipt className="h-5 w-5" />
+              Sale Returns & Credit Notes
+            </CardTitle>
+            <CardDescription>
+              Process customer returns and issue credit notes
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8 text-muted-foreground">
+              <Receipt className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No returns found</p>
+              <p className="text-sm">Process your first return to get started</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+  );
+}
