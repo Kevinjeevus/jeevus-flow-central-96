@@ -6,8 +6,7 @@ import { Input } from "@/components/ui/input";
 
 export default function OnlineStore() {
   return (
-    <ErpLayout>
-      <div className="p-6">
+    <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Online Store</h1>
@@ -52,6 +51,5 @@ export default function OnlineStore() {
           </CardContent>
         </Card>
       </div>
-    </ErpLayout>
   );
 }

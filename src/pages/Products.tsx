@@ -229,8 +229,7 @@ export default function Products() {
   const totalValue = products.reduce((sum, p) => sum + (p.stock_quantity * p.purchase_price), 0);
 
   return (
-    <ErpLayout>
-      <div className="space-y-6 p-6">
+    <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Products</h1>
@@ -700,6 +699,5 @@ export default function Products() {
         </DialogContent>
       </Dialog>
       </div>
-    </ErpLayout>
   );
 }
