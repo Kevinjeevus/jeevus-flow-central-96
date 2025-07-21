@@ -299,24 +299,27 @@ export default function Inventory() {
                          <Badge variant="default">In Stock</Badge>
                        )}
                      </TableCell>
-                     <TableCell>
-                       <div className="flex gap-2">
-                         <Button 
-                           size="sm" 
-                           variant="outline"
-                           onClick={() => openStockDialog(product, 'add')}
-                         >
-                           <Plus className="h-3 w-3" />
-                         </Button>
-                         <Button 
-                           size="sm" 
-                           variant="outline"
-                           onClick={() => openStockDialog(product, 'reduce')}
-                         >
-                           <Minus className="h-3 w-3" />
-                         </Button>
-                       </div>
-                     </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="default"
+                            onClick={() => openStockDialog(product, 'add')}
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Add
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="destructive"
+                            onClick={() => openStockDialog(product, 'reduce')}
+                          >
+                            <Minus className="h-3 w-3 mr-1" />
+                            Reduce
+                          </Button>
+                        </div>
+                      </TableCell>
                    </TableRow>
                  ))}
               </TableBody>
