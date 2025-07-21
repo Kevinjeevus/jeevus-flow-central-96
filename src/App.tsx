@@ -39,6 +39,10 @@ import FinanceReports from "./pages/FinanceReports";
 import BankAccounts from "./pages/money/BankAccounts";
 import CashInHand from "./pages/money/CashInHand";
 import Cheques from "./pages/money/Cheques";
+import PurchaseBills from "./pages/PurchaseBills";
+import PaymentOut from "./pages/PaymentOut";
+import PurchaseOrder from "./pages/PurchaseOrder";
+import PurchaseReturn from "./pages/PurchaseReturn";
 
 const queryClient = new QueryClient();
 
@@ -70,6 +74,10 @@ function ProtectedRoutes() {
             <Route path="inventory" element={<Inventory />} />
             <Route path="sales" element={<Sales />} />
             <Route path="purchases" element={<Purchases />} />
+            <Route path="purchase-bills" element={<PurchaseBills />} />
+            <Route path="payment-out" element={<PaymentOut />} />
+            <Route path="purchase-order" element={<PurchaseOrder />} />
+            <Route path="purchase-return" element={<PurchaseReturn />} />
             <Route path="invoices" element={<Invoices />} />
             <Route path="online-store" element={<OnlineStore />} />
             <Route path="estimate-quotation" element={<EstimateQuotation />} />

@@ -82,7 +82,6 @@ const menuItems = [
       { title: "Purchases", url: "/purchases", icon: ShoppingCart },
       { title: "Purchase Bills", url: "/purchase-bills", icon: FileText },
       { title: "Payment-Out", url: "/payment-out", icon: ArrowUpCircle },
-      { title: "Expenses", url: "/expenses", icon: Calculator },
       { title: "Purchase Order", url: "/purchase-order", icon: ShoppingCart },
       { title: "Purchase Return/Dr. Note", url: "/purchase-return", icon: ArrowDownCircle },
       { title: "Suppliers", url: "/suppliers", icon: Users },

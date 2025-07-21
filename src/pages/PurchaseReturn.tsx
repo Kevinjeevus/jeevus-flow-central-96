@@ -1,19 +1,19 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Filter, ShoppingCart } from "lucide-react";
+import { Plus, Search, Filter, ArrowDownCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
-export default function Purchases() {
+export default function PurchaseReturn() {
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Purchases</h1>
-          <p className="text-muted-foreground">Manage purchase orders and vendor transactions</p>
+          <h1 className="text-2xl font-bold text-foreground">Purchase Return / Dr. Note</h1>
+          <p className="text-muted-foreground">Manage purchase returns and debit notes</p>
         </div>
         <Button className="bg-gradient-primary hover:bg-gradient-primary/90">
           <Plus className="h-4 w-4 mr-2" />
-          New Purchase
+          New Purchase Return
         </Button>
       </div>
 
@@ -21,7 +21,7 @@ export default function Purchases() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input 
-            placeholder="Search purchases..." 
+            placeholder="Search purchase returns..." 
             className="pl-10"
           />
         </div>
@@ -34,18 +34,18 @@ export default function Purchases() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <ShoppingCart className="h-5 w-5" />
-            Purchase Orders
+            <ArrowDownCircle className="h-5 w-5" />
+            Purchase Returns / Debit Notes
           </CardTitle>
           <CardDescription>
-            Track and manage all purchase orders from suppliers
+            Track and manage all purchase returns and debit notes
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8 text-muted-foreground">
-            <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No purchases found</p>
-            <p className="text-sm">Create your first purchase order to get started</p>
+            <ArrowDownCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>No purchase returns found</p>
+            <p className="text-sm">Create your first purchase return to get started</p>
           </div>
         </CardContent>
       </Card>
