@@ -1,12 +1,18 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Filter, Warehouse, Package, TrendingUp, TrendingDown, ExternalLink, Minus } from "lucide-react";
+import { Plus, Search, Filter, Warehouse, Package, TrendingUp, TrendingDown, ExternalLink, Minus, FileText } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -32,6 +38,9 @@ export default function Inventory() {
   const [stockAdjustment, setStockAdjustment] = useState<number>(0);
   const [adjustmentType, setAdjustmentType] = useState<'add' | 'reduce'>('add');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [transactionDate, setTransactionDate] = useState<Date>(new Date());
+  const [description, setDescription] = useState("");
+  const [batchNumber, setBatchNumber] = useState("");
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -67,12 +76,30 @@ export default function Inventory() {
         ? selectedProduct.stock_quantity + stockAdjustment
         : Math.max(0, selectedProduct.stock_quantity - stockAdjustment);
 
-      const { error } = await supabase
+      // Update product stock
+      const { error: productError } = await supabase
         .from("products")
         .update({ stock_quantity: newQuantity })
         .eq("id", selectedProduct.id);
 
-      if (error) throw error;
+      if (productError) throw productError;
+
+      // Create stock transaction record
+      const { error: transactionError } = await supabase
+        .from("stock_transactions")
+        .insert({
+          product_id: selectedProduct.id,
+          transaction_type: adjustmentType,
+          quantity: stockAdjustment,
+          batch_number: batchNumber || null,
+          description: description || null,
+          transaction_date: format(transactionDate, 'yyyy-MM-dd'),
+          previous_stock: selectedProduct.stock_quantity,
+          new_stock: newQuantity,
+          created_by: (await supabase.auth.getUser()).data.user?.id
+        });
+
+      if (transactionError) throw transactionError;
 
       // Update local state
       setProducts(products.map(p => 
@@ -88,6 +115,9 @@ export default function Inventory() {
 
       setIsDialogOpen(false);
       setStockAdjustment(0);
+      setDescription("");
+      setBatchNumber("");
+      setTransactionDate(new Date());
       setSelectedProduct(null);
     } catch (error) {
       toast({
@@ -101,6 +131,9 @@ export default function Inventory() {
   const openStockDialog = (product: Product, type: 'add' | 'reduce') => {
     setSelectedProduct(product);
     setAdjustmentType(type);
+    setTransactionDate(new Date());
+    setDescription("");
+    setBatchNumber("");
     setIsDialogOpen(true);
   };
 
@@ -128,6 +161,10 @@ export default function Inventory() {
           <Button variant="outline" onClick={() => navigate('/products')}>
             <ExternalLink className="h-4 w-4 mr-2" />
             Manage Products
+          </Button>
+          <Button variant="outline" onClick={() => navigate('/stock-records')}>
+            <FileText className="h-4 w-4 mr-2" />
+            Stock Records
           </Button>
           <Button onClick={() => navigate('/products')}>
             <Plus className="h-4 w-4 mr-2" />
@@ -353,9 +390,39 @@ export default function Inventory() {
                  disabled
                />
              </div>
+             
+             <div className="grid grid-cols-4 items-center gap-4">
+               <Label htmlFor="date" className="text-right">
+                 Date *
+               </Label>
+               <Popover>
+                 <PopoverTrigger asChild>
+                   <Button
+                     variant="outline"
+                     className={cn(
+                       "col-span-3 justify-start text-left font-normal",
+                       !transactionDate && "text-muted-foreground"
+                     )}
+                   >
+                     <CalendarIcon className="mr-2 h-4 w-4" />
+                     {transactionDate ? format(transactionDate, "PPP") : <span>Pick a date</span>}
+                   </Button>
+                 </PopoverTrigger>
+                 <PopoverContent className="w-auto p-0" align="start">
+                   <Calendar
+                     mode="single"
+                     selected={transactionDate}
+                     onSelect={(date) => date && setTransactionDate(date)}
+                     initialFocus
+                     className="pointer-events-auto"
+                   />
+                 </PopoverContent>
+               </Popover>
+             </div>
+
              <div className="grid grid-cols-4 items-center gap-4">
                <Label htmlFor="adjustment" className="text-right">
-                 Quantity
+                 Quantity *
                </Label>
                <Input
                  id="adjustment"
@@ -367,6 +434,34 @@ export default function Inventory() {
                  placeholder="Enter quantity"
                />
              </div>
+
+             <div className="grid grid-cols-4 items-center gap-4">
+               <Label htmlFor="batch-number" className="text-right">
+                 Batch Number
+               </Label>
+               <Input
+                 id="batch-number"
+                 value={batchNumber}
+                 onChange={(e) => setBatchNumber(e.target.value)}
+                 className="col-span-3"
+                 placeholder="Enter batch number (optional)"
+               />
+             </div>
+
+             <div className="grid grid-cols-4 items-center gap-4">
+               <Label htmlFor="description" className="text-right">
+                 Description
+               </Label>
+               <Textarea
+                 id="description"
+                 value={description}
+                 onChange={(e) => setDescription(e.target.value)}
+                 className="col-span-3"
+                 placeholder="Enter description (optional)"
+                 rows={3}
+               />
+             </div>
+
              {adjustmentType === 'reduce' && selectedProduct && (
                <div className="grid grid-cols-4 items-center gap-4">
                  <Label className="text-right">New Stock</Label>

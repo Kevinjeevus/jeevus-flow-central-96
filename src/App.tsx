@@ -17,6 +17,7 @@ import SaleOrder from "./pages/SaleOrder";
 import DeliveryChallan from "./pages/DeliveryChallan";
 import SaleReturn from "./pages/SaleReturn";
 import Inventory from "./pages/Inventory";
+import StockRecords from "./pages/StockRecords";
 import OnlineStore from "./pages/OnlineStore";
 import Purchases from "./pages/Purchases";
 import Suppliers from "./pages/Suppliers";
@@ -72,6 +73,7 @@ function ProtectedRoutes() {
             <Route path="products" element={<Products />} />
             <Route path="suppliers" element={<Suppliers />} />
             <Route path="inventory" element={<Inventory />} />
+            <Route path="stock-records" element={<StockRecords />} />
             <Route path="sales" element={<Sales />} />
             <Route path="purchases" element={<Purchases />} />
             <Route path="purchase-bills" element={<PurchaseBills />} />

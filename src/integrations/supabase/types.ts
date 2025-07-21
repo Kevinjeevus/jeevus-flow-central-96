@@ -1272,6 +1272,51 @@ export type Database = {
           },
         ]
       }
+      stock_transactions: {
+        Row: {
+          batch_number: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          new_stock: number
+          previous_stock: number
+          product_id: string
+          quantity: number
+          transaction_date: string
+          transaction_type: string
+          updated_at: string
+        }
+        Insert: {
+          batch_number?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          new_stock: number
+          previous_stock: number
+          product_id: string
+          quantity: number
+          transaction_date?: string
+          transaction_type: string
+          updated_at?: string
+        }
+        Update: {
+          batch_number?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          new_stock?: number
+          previous_stock?: number
+          product_id?: string
+          quantity?: number
+          transaction_date?: string
+          transaction_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       suppliers: {
         Row: {
           address: string | null
