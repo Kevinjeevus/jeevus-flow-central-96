@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Filter, Warehouse, Package, TrendingUp, TrendingDown, ExternalLink } from "lucide-react";
+import { Plus, Search, Filter, Warehouse, Package, TrendingUp, TrendingDown, ExternalLink, Minus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -26,6 +28,10 @@ export default function Inventory() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [stockAdjustment, setStockAdjustment] = useState<number>(0);
+  const [adjustmentType, setAdjustmentType] = useState<'add' | 'reduce'>('add');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -51,6 +57,51 @@ export default function Inventory() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleStockAdjustment = async () => {
+    if (!selectedProduct || stockAdjustment <= 0) return;
+
+    try {
+      const newQuantity = adjustmentType === 'add' 
+        ? selectedProduct.stock_quantity + stockAdjustment
+        : Math.max(0, selectedProduct.stock_quantity - stockAdjustment);
+
+      const { error } = await supabase
+        .from("products")
+        .update({ stock_quantity: newQuantity })
+        .eq("id", selectedProduct.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setProducts(products.map(p => 
+        p.id === selectedProduct.id 
+          ? { ...p, stock_quantity: newQuantity }
+          : p
+      ));
+
+      toast({
+        title: "Success",
+        description: `Stock ${adjustmentType === 'add' ? 'added' : 'reduced'} successfully`,
+      });
+
+      setIsDialogOpen(false);
+      setStockAdjustment(0);
+      setSelectedProduct(null);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update stock",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const openStockDialog = (product: Product, type: 'add' | 'reduce') => {
+    setSelectedProduct(product);
+    setAdjustmentType(type);
+    setIsDialogOpen(true);
   };
 
   const filteredProducts = products.filter(product =>
@@ -215,45 +266,126 @@ export default function Inventory() {
           ) : (
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Product</TableHead>
-                  <TableHead>SKU</TableHead>
-                  <TableHead>Current Stock</TableHead>
-                  <TableHead>Min Level</TableHead>
-                  <TableHead>Unit Price</TableHead>
-                  <TableHead>Total Value</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
+                 <TableRow>
+                   <TableHead>Product</TableHead>
+                   <TableHead>SKU</TableHead>
+                   <TableHead>Current Stock</TableHead>
+                   <TableHead>Min Level</TableHead>
+                   <TableHead>Unit Price</TableHead>
+                   <TableHead>Total Value</TableHead>
+                   <TableHead>Status</TableHead>
+                   <TableHead>Actions</TableHead>
+                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredProducts.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell className="font-medium">{product.name}</TableCell>
-                    <TableCell>{product.sku}</TableCell>
-                    <TableCell>
-                      <span className={product.stock_quantity <= product.min_stock_level ? "text-destructive font-medium" : ""}>
-                        {product.stock_quantity} {product.unit}
-                      </span>
-                    </TableCell>
-                    <TableCell>{product.min_stock_level} {product.unit}</TableCell>
-                    <TableCell>₹{product.purchase_price}</TableCell>
-                    <TableCell>₹{(product.stock_quantity * product.purchase_price).toLocaleString()}</TableCell>
-                    <TableCell>
-                      {product.stock_quantity <= product.min_stock_level ? (
-                        <Badge variant="destructive">Low Stock</Badge>
-                      ) : product.stock_quantity <= product.min_stock_level * 2 ? (
-                        <Badge variant="secondary">Medium</Badge>
-                      ) : (
-                        <Badge variant="default">In Stock</Badge>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                 {filteredProducts.map((product) => (
+                   <TableRow key={product.id}>
+                     <TableCell className="font-medium">{product.name}</TableCell>
+                     <TableCell>{product.sku}</TableCell>
+                     <TableCell>
+                       <span className={product.stock_quantity <= product.min_stock_level ? "text-destructive font-medium" : ""}>
+                         {product.stock_quantity} {product.unit}
+                       </span>
+                     </TableCell>
+                     <TableCell>{product.min_stock_level} {product.unit}</TableCell>
+                     <TableCell>₹{product.purchase_price}</TableCell>
+                     <TableCell>₹{(product.stock_quantity * product.purchase_price).toLocaleString()}</TableCell>
+                     <TableCell>
+                       {product.stock_quantity <= product.min_stock_level ? (
+                         <Badge variant="destructive">Low Stock</Badge>
+                       ) : product.stock_quantity <= product.min_stock_level * 2 ? (
+                         <Badge variant="secondary">Medium</Badge>
+                       ) : (
+                         <Badge variant="default">In Stock</Badge>
+                       )}
+                     </TableCell>
+                     <TableCell>
+                       <div className="flex gap-2">
+                         <Button 
+                           size="sm" 
+                           variant="outline"
+                           onClick={() => openStockDialog(product, 'add')}
+                         >
+                           <Plus className="h-3 w-3" />
+                         </Button>
+                         <Button 
+                           size="sm" 
+                           variant="outline"
+                           onClick={() => openStockDialog(product, 'reduce')}
+                         >
+                           <Minus className="h-3 w-3" />
+                         </Button>
+                       </div>
+                     </TableCell>
+                   </TableRow>
+                 ))}
               </TableBody>
             </Table>
           )}
-        </CardContent>
-      </Card>
-      </div>
-  );
-}
+         </CardContent>
+       </Card>
+
+       {/* Stock Adjustment Dialog */}
+       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+         <DialogContent className="sm:max-w-[425px]">
+           <DialogHeader>
+             <DialogTitle>
+               {adjustmentType === 'add' ? 'Add Stock' : 'Reduce Stock'}
+             </DialogTitle>
+             <DialogDescription>
+               {adjustmentType === 'add' 
+                 ? `Add stock to ${selectedProduct?.name}` 
+                 : `Reduce stock from ${selectedProduct?.name}`}
+             </DialogDescription>
+           </DialogHeader>
+           <div className="grid gap-4 py-4">
+             <div className="grid grid-cols-4 items-center gap-4">
+               <Label htmlFor="current-stock" className="text-right">
+                 Current Stock
+               </Label>
+               <Input
+                 id="current-stock"
+                 value={`${selectedProduct?.stock_quantity || 0} ${selectedProduct?.unit || ''}`}
+                 className="col-span-3"
+                 disabled
+               />
+             </div>
+             <div className="grid grid-cols-4 items-center gap-4">
+               <Label htmlFor="adjustment" className="text-right">
+                 Quantity
+               </Label>
+               <Input
+                 id="adjustment"
+                 type="number"
+                 min="1"
+                 value={stockAdjustment}
+                 onChange={(e) => setStockAdjustment(Number(e.target.value))}
+                 className="col-span-3"
+                 placeholder="Enter quantity"
+               />
+             </div>
+             {adjustmentType === 'reduce' && selectedProduct && (
+               <div className="grid grid-cols-4 items-center gap-4">
+                 <Label className="text-right">New Stock</Label>
+                 <Input
+                   value={`${Math.max(0, selectedProduct.stock_quantity - stockAdjustment)} ${selectedProduct.unit}`}
+                   className="col-span-3"
+                   disabled
+                 />
+               </div>
+             )}
+           </div>
+           <DialogFooter>
+             <Button 
+               type="submit" 
+               onClick={handleStockAdjustment}
+               disabled={stockAdjustment <= 0}
+             >
+               {adjustmentType === 'add' ? 'Add Stock' : 'Reduce Stock'}
+             </Button>
+           </DialogFooter>
+         </DialogContent>
+       </Dialog>
+       </div>
+   );
+ }
