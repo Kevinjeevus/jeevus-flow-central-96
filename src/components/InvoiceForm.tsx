@@ -226,14 +226,7 @@ export function InvoiceForm({ onClose, onSuccess }: InvoiceFormProps) {
       return;
     }
 
-    if (!activeSession) {
-      toast({
-        title: "Error",
-        description: "No active session found. Please mark attendance first.",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Session check is optional - not all users need active sessions
 
     const validItems = items.filter(item => item.product_id && item.quantity > 0);
     if (validItems.length === 0) {
@@ -253,8 +246,8 @@ export function InvoiceForm({ onClose, onSuccess }: InvoiceFormProps) {
         .insert({
           customer_id: invoiceData.customer_id,
           user_id: user?.id,
-          route_id: activeSession.route_id,
-          session_id: activeSession.id,
+           route_id: activeSession?.route_id || null,
+           session_id: activeSession?.id || null,
           invoice_number: invoiceData.invoiceNumber,
           invoice_date: invoiceData.invoiceDate,
           due_date: invoiceData.dueDate || null,
