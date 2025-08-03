@@ -16,6 +16,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { CustomerForm } from "@/components/CustomerForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useInvoiceNumber } from "@/hooks/useInvoiceNumber";
+import { InvoicePreview } from "@/components/InvoicePreview";
 
 interface InvoiceItem {
   id: string;
@@ -59,6 +60,8 @@ export function InvoiceForm({ onClose, onSuccess }: InvoiceFormProps) {
   const [customerSearchOpen, setCustomerSearchOpen] = useState(false);
   const [showNewCustomerForm, setShowNewCustomerForm] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState("");
+  const [showInvoicePreview, setShowInvoicePreview] = useState(false);
+  const [createdInvoice, setCreatedInvoice] = useState<any>(null);
   
   const [invoiceData, setInvoiceData] = useState({
     customer_id: "",
@@ -69,7 +72,8 @@ export function InvoiceForm({ onClose, onSuccess }: InvoiceFormProps) {
     taxRate: 18,
     payment_method: "cash",
     payment_account_id: "",
-    cheque_id: ""
+    cheque_id: "",
+    received_amount: ""
   });
 
   const [items, setItems] = useState<InvoiceItem[]>([
@@ -127,8 +131,7 @@ export function InvoiceForm({ onClose, onSuccess }: InvoiceFormProps) {
     try {
       const { data, error } = await supabase
         .from('accounts')
-        .select('id, account_name, account_type, current_balance')
-        .eq('account_type', 'assets')
+        .select('id, account_name, account_type, current_balance, account_number, bank_name')
         .eq('is_active', true)
         .order('account_name');
       
@@ -284,13 +287,54 @@ export function InvoiceForm({ onClose, onSuccess }: InvoiceFormProps) {
 
       if (itemsError) throw itemsError;
 
+      // Fetch the complete invoice with customer details for preview
+      const { data: completeInvoice, error: fetchError } = await supabase
+        .from('sales_invoices')
+        .select(`
+          *,
+          customers (name, email, phone, address),
+          sales_invoice_items (
+            *, 
+            products (name)
+          )
+        `)
+        .eq('id', invoice.id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Format data for preview
+      const invoiceForPreview = {
+        id: completeInvoice.id,
+        invoice_number: completeInvoice.invoice_number,
+        invoice_date: completeInvoice.invoice_date,
+        customer: {
+          name: completeInvoice.customers.name,
+          email: completeInvoice.customers.email,
+          phone: completeInvoice.customers.phone,
+          address: completeInvoice.customers.address
+        },
+        items: completeInvoice.sales_invoice_items.map((item: any) => ({
+          product_name: item.products.name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total_price: item.total_price
+        })),
+        subtotal: completeInvoice.subtotal,
+        tax_amount: completeInvoice.tax_amount,
+        total_amount: completeInvoice.total_amount,
+        notes: completeInvoice.notes
+      };
+
+      setCreatedInvoice(invoiceForPreview);
+      setShowInvoicePreview(true);
+
       toast({
         title: "Success",
         description: `Invoice ${status === 'draft' ? 'saved as draft' : 'created and sent'}`,
       });
       
       onSuccess?.();
-      onClose();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -305,6 +349,17 @@ export function InvoiceForm({ onClose, onSuccess }: InvoiceFormProps) {
 
   return (
     <>
+      {createdInvoice && (
+        <InvoicePreview
+          isOpen={showInvoicePreview}
+          onClose={() => {
+            setShowInvoicePreview(false);
+            onClose();
+          }}
+          invoiceData={createdInvoice}
+        />
+      )}
+      
       <Dialog open={showNewCustomerForm} onOpenChange={setShowNewCustomerForm}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -573,11 +628,14 @@ export function InvoiceForm({ onClose, onSuccess }: InvoiceFormProps) {
                     <SelectValue placeholder="Select bank account" />
                   </SelectTrigger>
                   <SelectContent>
-                    {accounts.filter(acc => acc.account_name.toLowerCase().includes('bank')).map((account) => (
+                    {accounts.filter(acc => acc.bank_name || acc.account_name.toLowerCase().includes('bank')).map((account) => (
                       <SelectItem key={account.id} value={account.id}>
                         <div>
                           <div className="font-medium">{account.account_name}</div>
-                          <div className="text-sm text-muted-foreground">Balance: ₹{account.current_balance?.toLocaleString()}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {account.bank_name ? `${account.bank_name} - ${account.account_number}` : 'Bank Account'} | 
+                            Balance: ₹{account.current_balance?.toLocaleString()}
+                          </div>
                         </div>
                       </SelectItem>
                     ))}
@@ -627,6 +685,18 @@ export function InvoiceForm({ onClose, onSuccess }: InvoiceFormProps) {
                 </Select>
               </div>
             )}
+
+            <div>
+              <Label htmlFor="received_amount">Received Amount</Label>
+              <Input
+                id="received_amount"
+                type="number"
+                value={invoiceData.received_amount}
+                onChange={(e) => setInvoiceData({...invoiceData, received_amount: e.target.value})}
+                placeholder="0.00"
+                step="0.01"
+              />
+            </div>
 
             <div>
               <Label htmlFor="notes">Notes</Label>
