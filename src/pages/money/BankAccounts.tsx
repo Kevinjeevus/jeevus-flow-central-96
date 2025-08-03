@@ -30,7 +30,7 @@ export default function BankAccounts() {
         .from("accounts")
         .select("*")
         .eq("account_type", "assets")
-        .not("account_number", "is", null)
+        .not("bank_name", "is", null)
         .order("account_code");
       
       if (error) throw error;
@@ -75,210 +75,208 @@ export default function BankAccounts() {
 
   return (
     <ErpLayout>
-      <div className="p-6 space-y-6">
-        {/* Header with Add Bank Button */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Banks</h1>
-          <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-orange-500 hover:bg-orange-600">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Bank
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-5xl">
-              <BankAccountForm onClose={() => setIsFormOpen(false)} />
-            </DialogContent>
-          </Dialog>
-        </div>
+      <div className="flex h-full">
+        {/* Left Sidebar - Bank Accounts List */}
+        <div className="w-80 border-r bg-muted/30 p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-foreground">Banks</h2>
+            <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="bg-orange-500 hover:bg-orange-600">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Bank
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-5xl">
+                <BankAccountForm onClose={() => setIsFormOpen(false)} />
+              </DialogContent>
+            </Dialog>
+          </div>
 
-        {/* Search */}
-        <div className="relative w-64">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Search..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
 
-        {/* Bank Accounts List */}
-        <Card>
-          <CardContent className="p-0">
-            {/* Table Header */}
-            <div className="flex items-center justify-between p-4 border-b bg-muted/30">
-              <span className="font-medium text-sm">ACCOUNT NAME</span>
-              <span className="font-medium text-sm">AMOUNT</span>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm font-medium px-2">
+              <span>ACCOUNT NAME</span>
+              <span>AMOUNT</span>
             </div>
 
-            {/* Bank Accounts */}
-            {filteredAccounts.length > 0 ? (
-              <div className="space-y-0">
-                {filteredAccounts.map((account) => (
-                  <div 
-                    key={account.id}
-                    className="flex items-center justify-between p-4 border-b hover:bg-muted/30 cursor-pointer"
-                    onClick={() => setSelectedAccount(account)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Building2 className="h-5 w-5 text-blue-500" />
-                      <div>
-                        <div className="font-medium">{account.account_name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {account.bank_name} • {account.account_number}
-                        </div>
-                      </div>
+            {filteredAccounts.map((account) => (
+              <div
+                key={account.id}
+                className={cn(
+                  "flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-muted transition-colors",
+                  selectedAccount?.id === account.id && "bg-blue-50 border border-blue-200"
+                )}
+                onClick={() => setSelectedAccount(account)}
+              >
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-blue-500" />
+                  <span className="font-medium">{account.account_name}</span>
+                </div>
+                <span className="font-semibold text-green-600">
+                  ₹ {account.current_balance?.toLocaleString() || '0.00'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Main Content Area */}
+        <div className="flex-1 p-6 space-y-6">
+          {selectedAccount ? (
+            <>
+              {/* Bank Details Form */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle>Bank Details</CardTitle>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button className="bg-blue-500 hover:bg-blue-600">
+                        Deposit / Withdraw
+                        <ChevronDown className="h-4 w-4 ml-2" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem>Bank to Cash Transfer</DropdownMenuItem>
+                      <DropdownMenuItem>Cash to Bank Transfer</DropdownMenuItem>
+                      <DropdownMenuItem>Bank to Bank Transfer</DropdownMenuItem>
+                      <DropdownMenuItem>Adjust Bank Balance</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <Label>Bank Name</Label>
+                      <Input value={selectedAccount.bank_name || ""} readOnly />
                     </div>
-                    <div className="text-right">
-                      <div className="font-semibold text-lg">
-                        ₹{account.current_balance?.toLocaleString() || '0'}
-                      </div>
-                      <Badge variant={account.is_active ? "default" : "secondary"}>
-                        {account.is_active ? "Active" : "Inactive"}
-                      </Badge>
+                    <div className="space-y-2">
+                      <Label>Account Number</Label>
+                      <Input value={selectedAccount.account_number || ""} readOnly />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>IFSC Code</Label>
+                      <Input value={selectedAccount.ifsc_code || ""} readOnly />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>UPI ID</Label>
+                      <Input value={selectedAccount.upi_id || ""} readOnly />
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Building2 className="h-12 w-12 mb-4 text-muted-foreground" />
-                <p className="text-muted-foreground mb-2">No bank accounts found</p>
+                </CardContent>
+              </Card>
+
+              {/* Transactions Section */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>TRANSACTIONS</CardTitle>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                      <Input
+                        placeholder="Search transactions..."
+                        className="pl-10 w-64"
+                      />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>TYPE</TableHead>
+                        <TableHead>NAME</TableHead>
+                        <TableHead>DATE</TableHead>
+                        <TableHead className="text-right">AMOUNT</TableHead>
+                        <TableHead className="w-10"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {transactions && transactions.length > 0 ? (
+                        transactions.map((transaction) => (
+                          <TableRow key={transaction.id}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div 
+                                  className={cn(
+                                    "w-2 h-2 rounded-full",
+                                    transaction.transaction_type === 'credit' 
+                                      ? "bg-green-500" 
+                                      : "bg-red-500"
+                                  )}
+                                />
+                                <span className="capitalize">
+                                  {transaction.transaction_type === 'credit' ? 'Sale' : 'Expense'}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              {transaction.description}
+                            </TableCell>
+                            <TableCell>
+                              {format(new Date(transaction.transaction_date), 'dd/MM/yyyy')}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <span className={cn(
+                                "font-medium",
+                                transaction.transaction_type === 'credit' 
+                                  ? "text-blue-600" 
+                                  : "text-red-600"
+                              )}>
+                                {transaction.transaction_type === 'credit' ? '₹ ' : '₹ '}
+                                {transaction.amount.toLocaleString()}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem>Edit</DropdownMenuItem>
+                                  <DropdownMenuItem>Delete</DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                            No transactions found for this account
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <Building2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-muted-foreground">No bank accounts found</p>
                 <p className="text-sm text-muted-foreground">
                   Create your first bank account to get started
                 </p>
               </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Selected Account Details */}
-        {selectedAccount && (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Bank Details - {selectedAccount.account_name}</CardTitle>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button className="bg-blue-500 hover:bg-blue-600">
-                    Deposit / Withdraw
-                    <ChevronDown className="h-4 w-4 ml-2" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem>Bank to Cash Transfer</DropdownMenuItem>
-                  <DropdownMenuItem>Cash to Bank Transfer</DropdownMenuItem>
-                  <DropdownMenuItem>Bank to Bank Transfer</DropdownMenuItem>
-                  <DropdownMenuItem>Adjust Bank Balance</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div className="space-y-2">
-                  <Label>Bank Name</Label>
-                  <Input value={selectedAccount.bank_name || ""} readOnly />
-                </div>
-                <div className="space-y-2">
-                  <Label>Account Number</Label>
-                  <Input value={selectedAccount.account_number || ""} readOnly />
-                </div>
-                <div className="space-y-2">
-                  <Label>IFSC Code</Label>
-                  <Input value={selectedAccount.ifsc_code || ""} readOnly />
-                </div>
-                <div className="space-y-2">
-                  <Label>UPI ID</Label>
-                  <Input value={selectedAccount.upi_id || ""} readOnly />
-                </div>
-              </div>
-
-              {/* Transactions */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-medium">Recent Transactions</h3>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input
-                      placeholder="Search transactions..."
-                      className="pl-10 w-64"
-                    />
-                  </div>
-                </div>
-
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>TYPE</TableHead>
-                      <TableHead>DESCRIPTION</TableHead>
-                      <TableHead>DATE</TableHead>
-                      <TableHead className="text-right">AMOUNT</TableHead>
-                      <TableHead className="w-10"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {transactions && transactions.length > 0 ? (
-                      transactions.map((transaction) => (
-                        <TableRow key={transaction.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <div 
-                                className={cn(
-                                  "w-2 h-2 rounded-full",
-                                  transaction.transaction_type === 'credit' 
-                                    ? "bg-green-500" 
-                                    : "bg-red-500"
-                                )}
-                              />
-                              <span className="capitalize">
-                                {transaction.transaction_type === 'credit' ? 'Credit' : 'Debit'}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {transaction.description}
-                          </TableCell>
-                          <TableCell>
-                            {format(new Date(transaction.transaction_date), 'dd/MM/yyyy')}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <span className={cn(
-                              "font-medium",
-                              transaction.transaction_type === 'credit' 
-                                ? "text-green-600" 
-                                : "text-red-600"
-                            )}>
-                              ₹{transaction.amount.toLocaleString()}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem>Edit</DropdownMenuItem>
-                                <DropdownMenuItem>Delete</DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                          No transactions found for this account
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+          )}
+        </div>
       </div>
     </ErpLayout>
   );
