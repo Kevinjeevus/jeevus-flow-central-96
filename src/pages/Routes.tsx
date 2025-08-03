@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { ErpLayout } from '@/components/ErpLayout';
+
 
 interface Route {
   id: string;
@@ -140,8 +140,7 @@ export default function Routes() {
   };
 
   return (
-    <ErpLayout>
-      <div className="p-6">
+    <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Route Management</h1>
@@ -271,6 +270,5 @@ export default function Routes() {
         </CardContent>
       </Card>
       </div>
-    </ErpLayout>
   );
 }
