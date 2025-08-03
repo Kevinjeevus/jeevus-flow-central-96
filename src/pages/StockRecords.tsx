@@ -54,6 +54,7 @@ export default function StockRecords() {
 
   const fetchTransactions = async () => {
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from("stock_transactions")
         .select(`
@@ -66,9 +67,15 @@ export default function StockRecords() {
         `)
         .order('transaction_date', { ascending: sortOrder === 'asc' });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Stock transactions fetch error:', error);
+        throw error;
+      }
+      
+      console.log('Fetched stock transactions:', data);
       setTransactions((data as any) || []);
     } catch (error) {
+      console.error('Error fetching stock transactions:', error);
       toast({
         title: "Error",
         description: "Failed to load stock transactions",
