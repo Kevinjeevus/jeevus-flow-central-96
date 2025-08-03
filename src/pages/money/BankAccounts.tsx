@@ -30,7 +30,7 @@ export default function BankAccounts() {
         .from("accounts")
         .select("*")
         .eq("account_type", "assets")
-        .ilike("account_name", "%bank%")
+        .not("bank_name", "is", null)
         .order("account_code");
       
       if (error) throw error;
