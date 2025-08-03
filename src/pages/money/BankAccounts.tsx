@@ -12,7 +12,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { BankAccountForm } from "@/components/finance/BankAccountForm";
-import { ErpLayout } from "@/components/ErpLayout";
+
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -66,16 +66,11 @@ export default function BankAccounts() {
   }
 
   if (isLoading) {
-    return (
-      <ErpLayout>
-        <div className="text-center py-8">Loading bank accounts...</div>
-      </ErpLayout>
-    );
+    return <div className="text-center py-8">Loading bank accounts...</div>;
   }
 
   return (
-    <ErpLayout>
-      <div className="flex h-full">
+    <div className="flex h-full">
         {/* Left Sidebar - Bank Accounts List */}
         <div className="w-80 border-r bg-muted/30 p-4 space-y-4">
           <div className="flex items-center justify-between">
@@ -278,6 +273,5 @@ export default function BankAccounts() {
           )}
         </div>
       </div>
-    </ErpLayout>
   );
 }
