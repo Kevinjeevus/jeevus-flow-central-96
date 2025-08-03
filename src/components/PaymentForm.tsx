@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Save, DollarSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 interface PaymentFormProps {
   payment?: any;
@@ -18,7 +20,8 @@ interface PaymentFormProps {
 export function PaymentForm({ payment, paymentType = "payment_in", onClose }: PaymentFormProps) {
   const { toast } = useToast();
   const [paymentData, setPaymentData] = useState({
-    customerName: "",
+    customerId: "",
+    invoiceId: "",
     paymentNumber: `PAY-${Date.now()}`,
     paymentDate: new Date().toISOString().split('T')[0],
     amount: "",
@@ -27,12 +30,69 @@ export function PaymentForm({ payment, paymentType = "payment_in", onClose }: Pa
     notes: "",
   });
 
-  const handleSave = () => {
-    toast({
-      title: "Payment Recorded",
-      description: "Payment has been successfully recorded",
-    });
-    onClose();
+  // Fetch customers
+  const { data: customers } = useQuery({
+    queryKey: ['customers'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('customers')
+        .select('id, name, company')
+        .eq('status', 'active')
+        .order('name');
+      return data || [];
+    }
+  });
+
+  // Fetch invoices for selected customer
+  const { data: invoices } = useQuery({
+    queryKey: ['customer-invoices', paymentData.customerId],
+    queryFn: async () => {
+      if (!paymentData.customerId) return [];
+      const { data } = await supabase
+        .from('sales_invoices')
+        .select('id, invoice_number, total_amount, status')
+        .eq('customer_id', paymentData.customerId)
+        .in('status', ['draft', 'sent', 'partial'])
+        .order('created_at', { ascending: false });
+      return data || [];
+    },
+    enabled: !!paymentData.customerId
+  });
+
+  const handleSave = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const { error } = await supabase
+        .from('payments')
+        .insert({
+          user_id: user.id,
+          customer_id: paymentData.customerId || null,
+          payment_number: paymentData.paymentNumber,
+          payment_date: paymentData.paymentDate,
+          amount: parseFloat(paymentData.amount),
+          payment_method: paymentData.paymentMethod,
+          reference_number: paymentData.reference,
+          description: paymentData.notes,
+          payment_type: paymentType,
+          account_id: '00000000-0000-0000-0000-000000000000' // Default account - should be configurable
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Payment Recorded",
+        description: "Payment has been successfully recorded",
+      });
+      onClose();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to record payment",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -61,14 +121,45 @@ export function PaymentForm({ payment, paymentType = "payment_in", onClose }: Pa
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="customerName">Customer Name</Label>
-              <Input
-                id="customerName"
-                value={paymentData.customerName}
-                onChange={(e) => setPaymentData({...paymentData, customerName: e.target.value})}
-                placeholder="Enter customer name"
-              />
+              <Label htmlFor="customerId">Customer</Label>
+              <Select 
+                value={paymentData.customerId} 
+                onValueChange={(value) => setPaymentData({...paymentData, customerId: value, invoiceId: ""})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select customer" />
+                </SelectTrigger>
+                <SelectContent>
+                  {customers?.map((customer) => (
+                    <SelectItem key={customer.id} value={customer.id}>
+                      {customer.name} {customer.company && `(${customer.company})`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+            <div>
+              <Label htmlFor="invoiceId">Link to Invoice (Optional)</Label>
+              <Select 
+                value={paymentData.invoiceId} 
+                onValueChange={(value) => setPaymentData({...paymentData, invoiceId: value})}
+                disabled={!paymentData.customerId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select invoice" />
+                </SelectTrigger>
+                <SelectContent>
+                  {invoices?.map((invoice) => (
+                    <SelectItem key={invoice.id} value={invoice.id}>
+                      {invoice.invoice_number} - ₹{invoice.total_amount}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="paymentNumber">Payment Number</Label>
               <Input
@@ -78,9 +169,6 @@ export function PaymentForm({ payment, paymentType = "payment_in", onClose }: Pa
                 placeholder="PAY-001"
               />
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="paymentDate">Payment Date</Label>
               <Input
@@ -90,6 +178,9 @@ export function PaymentForm({ payment, paymentType = "payment_in", onClose }: Pa
                 onChange={(e) => setPaymentData({...paymentData, paymentDate: e.target.value})}
               />
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="amount">Amount</Label>
               <Input
