@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FileText, Download, Share, Printer } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { FileText, Download, Share, Printer, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface InvoiceData {
   id: string;
@@ -30,11 +32,15 @@ interface InvoicePreviewProps {
   isOpen: boolean;
   onClose: () => void;
   invoiceData: InvoiceData;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onRefresh?: () => void;
 }
 
-export function InvoicePreview({ isOpen, onClose, invoiceData }: InvoicePreviewProps) {
+export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete, onRefresh }: InvoicePreviewProps) {
   const { toast } = useToast();
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const generatePDF = async () => {
     setIsGeneratingPDF(true);
@@ -186,6 +192,44 @@ export function InvoicePreview({ isOpen, onClose, invoiceData }: InvoicePreviewP
     }
   };
 
+  const handleDeleteInvoice = async () => {
+    setIsDeleting(true);
+    try {
+      // Delete invoice items first
+      const { error: itemsError } = await supabase
+        .from('sales_invoice_items')
+        .delete()
+        .eq('sales_invoice_id', invoiceData.id);
+
+      if (itemsError) throw itemsError;
+
+      // Delete the invoice
+      const { error: invoiceError } = await supabase
+        .from('sales_invoices')
+        .delete()
+        .eq('id', invoiceData.id);
+
+      if (invoiceError) throw invoiceError;
+
+      toast({
+        title: "Success",
+        description: "Invoice deleted successfully",
+      });
+
+      onDelete?.();
+      onRefresh?.();
+      onClose();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete invoice",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -198,19 +242,58 @@ export function InvoicePreview({ isOpen, onClose, invoiceData }: InvoicePreviewP
         
         <div className="space-y-6">
           {/* Action Buttons */}
-          <div className="flex gap-2 justify-end border-b pb-4">
-            <Button variant="outline" onClick={shareInvoice}>
-              <Share className="h-4 w-4 mr-2" />
-              Share
-            </Button>
-            <Button variant="outline" onClick={generatePDF} disabled={isGeneratingPDF}>
-              <Download className="h-4 w-4 mr-2" />
-              {isGeneratingPDF ? "Generating..." : "Download PDF"}
-            </Button>
-            <Button onClick={generatePDF} disabled={isGeneratingPDF}>
-              <Printer className="h-4 w-4 mr-2" />
-              Print
-            </Button>
+          <div className="flex gap-2 justify-between border-b pb-4">
+            <div className="flex gap-2">
+              {onEdit && (
+                <Button variant="outline" onClick={onEdit}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+              )}
+              {onDelete && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" className="text-destructive hover:text-destructive">
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the invoice
+                        {invoiceData.invoice_number} and remove all associated data.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDeleteInvoice}
+                        disabled={isDeleting}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        {isDeleting ? "Deleting..." : "Delete"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={shareInvoice}>
+                <Share className="h-4 w-4 mr-2" />
+                Share
+              </Button>
+              <Button variant="outline" onClick={generatePDF} disabled={isGeneratingPDF}>
+                <Download className="h-4 w-4 mr-2" />
+                {isGeneratingPDF ? "Generating..." : "Download PDF"}
+              </Button>
+              <Button onClick={generatePDF} disabled={isGeneratingPDF}>
+                <Printer className="h-4 w-4 mr-2" />
+                Print
+              </Button>
+            </div>
           </div>
 
           {/* Invoice Content */}
