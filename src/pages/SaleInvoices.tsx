@@ -270,6 +270,34 @@ export default function SaleInvoices() {
     }
   };
 
+  const handleDeleteInvoice = async (invoiceId: string) => {
+    if (!confirm("Are you sure you want to delete this invoice?")) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('sales_invoices')
+        .delete()
+        .eq('id', invoiceId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Invoice deleted successfully",
+      });
+
+      fetchInvoices();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete invoice",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <ErpLayout>
       {/* Invoice Preview Dialog */}
@@ -411,6 +439,13 @@ export default function SaleInvoices() {
                               <DropdownMenuItem onClick={() => handleShareInvoice(invoice)}>
                                 <Share className="h-4 w-4 mr-2" />
                                 Share
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDeleteInvoice(invoice.id)}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -585,12 +620,19 @@ export default function SaleInvoices() {
                                    <MoreHorizontal className="h-4 w-4" />
                                  </Button>
                                </DropdownMenuTrigger>
-                               <DropdownMenuContent align="end">
-                                 <DropdownMenuItem onClick={() => handleShareInvoice(invoice)}>
-                                   <Share className="h-4 w-4 mr-2" />
-                                   Share
-                                 </DropdownMenuItem>
-                               </DropdownMenuContent>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => handleShareInvoice(invoice)}>
+                                    <Share className="h-4 w-4 mr-2" />
+                                    Share
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleDeleteInvoice(invoice.id)}
+                                    className="text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
                              </DropdownMenu>
                            </div>
                          </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -53,6 +53,27 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
   const { toast } = useToast();
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [companySettings, setCompanySettings] = useState<any>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchCompanySettings();
+    }
+  }, [isOpen]);
+
+  const fetchCompanySettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('company_settings')
+        .select('*')
+        .maybeSingle();
+
+      if (error) throw error;
+      setCompanySettings(data);
+    } catch (error: any) {
+      console.error('Error fetching company settings:', error);
+    }
+  };
 
   // Calculate HSN/SAC wise tax breakdown
   const getHsnTaxBreakdown = () => {
@@ -123,7 +144,11 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
         </head>
         <body>
           <div class="header">
-            <div class="company-name">JEEVUS NATURALS</div>
+            ${companySettings?.company_logo_url ? `<img src="${companySettings.company_logo_url}" alt="Company Logo" style="height: 60px; width: auto; margin: 0 auto 10px;" />` : ''}
+            <div class="company-name">${companySettings?.company_name || 'JEEVUS NATURALS'}</div>
+            ${companySettings?.address ? `<div style="font-size: 12px; margin: 5px 0;">${companySettings.address}</div>` : ''}
+            ${companySettings?.phone_number ? `<div style="font-size: 12px;">Ph: ${companySettings.phone_number}</div>` : ''}
+            ${companySettings?.gstin ? `<div style="font-size: 12px;">GSTIN: ${companySettings.gstin}</div>` : ''}
             <div class="invoice-title">TAX INVOICE</div>
           </div>
           
@@ -345,7 +370,29 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
           <div className="bg-white p-8 border rounded-lg">
             {/* Header */}
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-gray-800">JEEVUS NATURALS</h1>
+              <div className="flex items-center justify-center gap-4 mb-4">
+                {companySettings?.company_logo_url && (
+                  <img 
+                    src={companySettings.company_logo_url} 
+                    alt="Company Logo" 
+                    className="h-16 w-16 object-contain"
+                  />
+                )}
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-800">
+                    {companySettings?.company_name || 'JEEVUS NATURALS'}
+                  </h1>
+                  {companySettings?.address && (
+                    <p className="text-sm text-gray-600 mt-1">{companySettings.address}</p>
+                  )}
+                  {companySettings?.phone_number && (
+                    <p className="text-sm text-gray-600">Ph: {companySettings.phone_number}</p>
+                  )}
+                  {companySettings?.gstin && (
+                    <p className="text-sm text-gray-600">GSTIN: {companySettings.gstin}</p>
+                  )}
+                </div>
+              </div>
               <h2 className="text-xl text-gray-600 mt-2">TAX INVOICE</h2>
             </div>
 
