@@ -183,10 +183,10 @@ export default function SaleInvoices() {
         .from('sales_invoices')
         .select(`
           *,
-          customers (name, email, phone, address),
+          customers (name, email, phone, address, gstin),
           sales_invoice_items (
             *, 
-            products (name)
+            products (name, hsn_code, gst_rate, unit)
           )
         `)
         .eq('id', invoiceId)
@@ -194,27 +194,44 @@ export default function SaleInvoices() {
 
       if (error) throw error;
 
+      // Fetch bank account details if payment_account_id exists
+      let bankAccount = null;
+      if (data.payment_account_id) {
+        const { data: accountData } = await supabase
+          .from('accounts')
+          .select('account_name, account_number, bank_name, ifsc_code, account_holder_name')
+          .eq('id', data.payment_account_id)
+          .single();
+        bankAccount = accountData;
+      }
+
       // Format data for preview
       const invoiceForPreview = {
         id: data.id,
         invoice_number: data.invoice_number,
         invoice_date: data.invoice_date,
+        payment_method: data.payment_method,
         customer: {
           name: data.customers.name,
           email: data.customers.email,
           phone: data.customers.phone,
-          address: data.customers.address
+          address: data.customers.address,
+          gstin: data.customers.gstin
         },
         items: data.sales_invoice_items.map((item: any) => ({
           product_name: item.products.name,
           quantity: item.quantity,
           unit_price: item.unit_price,
-          total_price: item.total_price
+          total_price: item.total_price,
+          hsn_code: item.products.hsn_code,
+          gst_rate: item.products.gst_rate,
+          unit: item.products.unit
         })),
         subtotal: data.subtotal,
         tax_amount: data.tax_amount,
         total_amount: data.total_amount,
-        notes: data.notes
+        notes: data.notes,
+        bank_account: bankAccount
       };
 
       setSelectedInvoice(invoiceForPreview);

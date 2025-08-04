@@ -10,6 +10,7 @@ interface InvoiceData {
   id: string;
   invoice_number: string;
   invoice_date: string;
+  payment_method?: string;
   customer: {
     name: string;
     email: string;
@@ -30,6 +31,13 @@ interface InvoiceData {
   tax_amount: number;
   total_amount: number;
   notes?: string;
+  bank_account?: {
+    account_name: string;
+    account_number: string;
+    bank_name: string;
+    ifsc_code: string;
+    account_holder_name: string;
+  } | null;
 }
 
 interface InvoicePreviewProps {
@@ -404,7 +412,7 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
                 </div>
                 
                 <div className="mt-4">
-                  <p className="text-sm"><span className="font-medium">Payment Mode:</span> Cash</p>
+                  <p className="text-sm"><span className="font-medium">Payment Mode:</span> {invoiceData.payment_method?.charAt(0).toUpperCase() + invoiceData.payment_method?.slice(1) || 'Cash'}</p>
                   <p className="text-sm"><span className="font-medium">Total:</span> ₹{invoiceData.total_amount.toFixed(2)}</p>
                   <p className="text-sm"><span className="font-medium">Received:</span> ₹{invoiceData.total_amount.toFixed(2)}</p>
                   <p className="text-sm"><span className="font-medium">Balance:</span> ₹0.00</p>
@@ -516,11 +524,22 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
                       QR Code
                     </div>
                     <div className="text-sm">
-                      <p><span className="font-medium">Name:</span> UNION BANK OF INDIA</p>
-                      <p><span className="font-medium">Branch:</span> KUNDARA</p>
-                      <p><span className="font-medium">Account No.:</span> 284511100001097</p>
-                      <p><span className="font-medium">IFSC code:</span> UBIN0528459</p>
-                      <p><span className="font-medium">Account Holder's Name:</span> JEEVUS NATURALS</p>
+                      {invoiceData.bank_account ? (
+                        <>
+                          <p><span className="font-medium">Name:</span> {invoiceData.bank_account.bank_name}</p>
+                          <p><span className="font-medium">Account No.:</span> {invoiceData.bank_account.account_number}</p>
+                          <p><span className="font-medium">IFSC code:</span> {invoiceData.bank_account.ifsc_code}</p>
+                          <p><span className="font-medium">Account Holder's Name:</span> {invoiceData.bank_account.account_holder_name}</p>
+                        </>
+                      ) : (
+                        <>
+                          <p><span className="font-medium">Name:</span> UNION BANK OF INDIA</p>
+                          <p><span className="font-medium">Branch:</span> KUNDARA</p>
+                          <p><span className="font-medium">Account No.:</span> 284511100001097</p>
+                          <p><span className="font-medium">IFSC code:</span> UBIN0528459</p>
+                          <p><span className="font-medium">Account Holder's Name:</span> JEEVUS NATURALS</p>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
