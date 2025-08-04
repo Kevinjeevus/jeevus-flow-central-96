@@ -15,12 +15,16 @@ interface InvoiceData {
     email: string;
     phone: string;
     address?: string;
+    gstin?: string;
   };
   items: Array<{
     product_name: string;
     quantity: number;
     unit_price: number;
     total_price: number;
+    hsn_code?: string;
+    gst_rate?: number;
+    unit?: string;
   }>;
   subtotal: number;
   tax_amount: number;
@@ -41,6 +45,39 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
   const { toast } = useToast();
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Calculate HSN/SAC wise tax breakdown
+  const getHsnTaxBreakdown = () => {
+    const hsnMap = new Map();
+    
+    invoiceData.items.forEach(item => {
+      const hsn = item.hsn_code || 'N/A';
+      const gstRate = item.gst_rate || 18; // Default 18%
+      const taxableAmount = item.total_price / (1 + gstRate / 100);
+      const taxAmount = item.total_price - taxableAmount;
+      const cgstAmount = taxAmount / 2;
+      const sgstAmount = taxAmount / 2;
+      
+      if (hsnMap.has(hsn)) {
+        const existing = hsnMap.get(hsn);
+        existing.taxableAmount += taxableAmount;
+        existing.cgstAmount += cgstAmount;
+        existing.sgstAmount += sgstAmount;
+        existing.totalTax += taxAmount;
+      } else {
+        hsnMap.set(hsn, {
+          hsn,
+          gstRate,
+          taxableAmount,
+          cgstAmount,
+          sgstAmount,
+          totalTax: taxAmount
+        });
+      }
+    });
+    
+    return Array.from(hsnMap.values());
+  };
 
   const generatePDF = async () => {
     setIsGeneratingPDF(true);
@@ -329,39 +366,179 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
               <table className="w-full border-collapse border border-gray-300">
                 <thead>
                   <tr className="bg-gray-50">
-                    <th className="border border-gray-300 px-4 py-3 text-left">Product/Service</th>
-                    <th className="border border-gray-300 px-4 py-3 text-center">Quantity</th>
-                    <th className="border border-gray-300 px-4 py-3 text-right">Unit Price</th>
-                    <th className="border border-gray-300 px-4 py-3 text-right">Total</th>
+                    <th className="border border-gray-300 px-2 py-3 text-left text-sm">Item name</th>
+                    <th className="border border-gray-300 px-2 py-3 text-center text-sm">HSN/SAC</th>
+                    <th className="border border-gray-300 px-2 py-3 text-center text-sm">Quantity</th>
+                    <th className="border border-gray-300 px-2 py-3 text-center text-sm">Unit</th>
+                    <th className="border border-gray-300 px-2 py-3 text-right text-sm">Price/Unit</th>
+                    <th className="border border-gray-300 px-2 py-3 text-center text-sm">GST%</th>
+                    <th className="border border-gray-300 px-2 py-3 text-right text-sm">Amount</th>
                   </tr>
                 </thead>
                 <tbody>
                   {invoiceData.items.map((item, index) => (
                     <tr key={index}>
-                      <td className="border border-gray-300 px-4 py-3">{item.product_name}</td>
-                      <td className="border border-gray-300 px-4 py-3 text-center">{item.quantity}</td>
-                      <td className="border border-gray-300 px-4 py-3 text-right">₹{item.unit_price.toFixed(2)}</td>
-                      <td className="border border-gray-300 px-4 py-3 text-right">₹{item.total_price.toFixed(2)}</td>
+                      <td className="border border-gray-300 px-2 py-3 text-sm">{item.product_name}</td>
+                      <td className="border border-gray-300 px-2 py-3 text-center text-sm">{item.hsn_code || 'N/A'}</td>
+                      <td className="border border-gray-300 px-2 py-3 text-center text-sm">{item.quantity}</td>
+                      <td className="border border-gray-300 px-2 py-3 text-center text-sm">{item.unit || 'Nos'}</td>
+                      <td className="border border-gray-300 px-2 py-3 text-right text-sm">₹{item.unit_price.toFixed(2)}</td>
+                      <td className="border border-gray-300 px-2 py-3 text-center text-sm">{item.gst_rate || 18}%</td>
+                      <td className="border border-gray-300 px-2 py-3 text-right text-sm">₹{item.total_price.toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
 
-            {/* Totals */}
-            <div className="flex justify-end mb-8">
-              <div className="w-64">
-                <div className="flex justify-between py-2">
-                  <span>Subtotal:</span>
-                  <span>₹{invoiceData.subtotal.toFixed(2)}</span>
+            {/* Summary Section */}
+            <div className="grid grid-cols-2 gap-8 mb-8">
+              <div>
+                <div className="text-right pr-8">
+                  <div className="text-lg font-semibold">Total: ₹{invoiceData.total_amount.toFixed(2)}</div>
                 </div>
-                <div className="flex justify-between py-2">
-                  <span>Tax (18%):</span>
-                  <span>₹{invoiceData.tax_amount.toFixed(2)}</span>
+                
+                <div className="mt-6">
+                  <p className="text-sm font-medium mb-2">Invoice Amount In Words:</p>
+                  <p className="text-sm font-semibold">Rupees Only</p>
                 </div>
-                <div className="flex justify-between py-3 text-lg font-bold border-t-2 border-gray-800">
-                  <span>Total:</span>
-                  <span>₹{invoiceData.total_amount.toFixed(2)}</span>
+                
+                <div className="mt-4">
+                  <p className="text-sm"><span className="font-medium">Payment Mode:</span> Cash</p>
+                  <p className="text-sm"><span className="font-medium">Total:</span> ₹{invoiceData.total_amount.toFixed(2)}</p>
+                  <p className="text-sm"><span className="font-medium">Received:</span> ₹{invoiceData.total_amount.toFixed(2)}</p>
+                  <p className="text-sm"><span className="font-medium">Balance:</span> ₹0.00</p>
+                </div>
+              </div>
+              
+              <div>
+                <div className="text-right">
+                  <div className="flex justify-between py-1 text-sm">
+                    <span>Sub Total:</span>
+                    <span>₹{invoiceData.subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between py-1 text-sm">
+                    <span>Round Off:</span>
+                    <span>₹0.00</span>
+                  </div>
+                  <div className="flex justify-between py-1 text-sm font-bold">
+                    <span>Total:</span>
+                    <span>₹{invoiceData.total_amount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between py-1 text-sm">
+                    <span>You Saved:</span>
+                    <span>₹0.00</span>
+                  </div>
+                </div>
+                
+                <div className="mt-4 text-right">
+                  <p className="text-sm"><span className="font-medium">Previous Due:</span> ₹0.00</p>
+                  <p className="text-sm"><span className="font-medium">Current Balance:</span> ₹{invoiceData.total_amount.toFixed(2)}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* HSN/SAC Tax Breakdown Table */}
+            <div className="mb-8">
+              <table className="w-full border-collapse border border-gray-300">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="border border-gray-300 px-2 py-2 text-center text-sm">HSN/SAC</th>
+                    <th className="border border-gray-300 px-2 py-2 text-right text-sm">Taxable amount</th>
+                    <th className="border border-gray-300 px-2 py-2 text-center text-sm">CGST</th>
+                    <th className="border border-gray-300 px-2 py-2 text-center text-sm">SGST</th>
+                    <th className="border border-gray-300 px-2 py-2 text-right text-sm">Total Tax Amount</th>
+                  </tr>
+                  <tr className="bg-gray-50">
+                    <th className="border border-gray-300 px-2 py-1 text-center text-xs"></th>
+                    <th className="border border-gray-300 px-2 py-1 text-center text-xs"></th>
+                    <th className="border border-gray-300 px-2 py-1 text-center text-xs">
+                      <div className="flex justify-around">
+                        <span>Rate</span>
+                        <span>Amount</span>
+                      </div>
+                    </th>
+                    <th className="border border-gray-300 px-2 py-1 text-center text-xs">
+                      <div className="flex justify-around">
+                        <span>Rate</span>
+                        <span>Amount</span>
+                      </div>
+                    </th>
+                    <th className="border border-gray-300 px-2 py-1 text-center text-xs"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {getHsnTaxBreakdown().map((hsnData, index) => (
+                    <tr key={index}>
+                      <td className="border border-gray-300 px-2 py-2 text-center text-sm">{hsnData.hsn}</td>
+                      <td className="border border-gray-300 px-2 py-2 text-right text-sm">₹{hsnData.taxableAmount.toFixed(2)}</td>
+                      <td className="border border-gray-300 px-2 py-2 text-center text-sm">
+                        <div className="flex justify-around">
+                          <span>{(hsnData.gstRate / 2).toFixed(1)}%</span>
+                          <span>₹{hsnData.cgstAmount.toFixed(2)}</span>
+                        </div>
+                      </td>
+                      <td className="border border-gray-300 px-2 py-2 text-center text-sm">
+                        <div className="flex justify-around">
+                          <span>{(hsnData.gstRate / 2).toFixed(1)}%</span>
+                          <span>₹{hsnData.sgstAmount.toFixed(2)}</span>
+                        </div>
+                      </td>
+                      <td className="border border-gray-300 px-2 py-2 text-right text-sm">₹{hsnData.totalTax.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                  <tr className="font-semibold bg-gray-50">
+                    <td className="border border-gray-300 px-2 py-2 text-center text-sm">Total</td>
+                    <td className="border border-gray-300 px-2 py-2 text-right text-sm">
+                      ₹{getHsnTaxBreakdown().reduce((sum, item) => sum + item.taxableAmount, 0).toFixed(2)}
+                    </td>
+                    <td className="border border-gray-300 px-2 py-2 text-right text-sm">
+                      ₹{getHsnTaxBreakdown().reduce((sum, item) => sum + item.cgstAmount, 0).toFixed(2)}
+                    </td>
+                    <td className="border border-gray-300 px-2 py-2 text-right text-sm">
+                      ₹{getHsnTaxBreakdown().reduce((sum, item) => sum + item.sgstAmount, 0).toFixed(2)}
+                    </td>
+                    <td className="border border-gray-300 px-2 py-2 text-right text-sm">
+                      ₹{getHsnTaxBreakdown().reduce((sum, item) => sum + item.totalTax, 0).toFixed(2)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Footer Section */}
+            <div className="grid grid-cols-2 gap-8 mt-8">
+              <div>
+                <div className="border border-gray-300 p-4">
+                  <h4 className="font-semibold mb-2">Bank Details</h4>
+                  <div className="flex">
+                    <div className="w-16 h-16 bg-gray-200 mr-4 flex items-center justify-center text-xs">
+                      QR Code
+                    </div>
+                    <div className="text-sm">
+                      <p><span className="font-medium">Name:</span> UNION BANK OF INDIA</p>
+                      <p><span className="font-medium">Branch:</span> KUNDARA</p>
+                      <p><span className="font-medium">Account No.:</span> 284511100001097</p>
+                      <p><span className="font-medium">IFSC code:</span> UBIN0528459</p>
+                      <p><span className="font-medium">Account Holder's Name:</span> JEEVUS NATURALS</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <div className="border border-gray-300 p-4 h-full">
+                  <div className="mb-4">
+                    <h4 className="font-semibold mb-2">Terms and conditions</h4>
+                    <p className="text-sm">Thanks for doing business with us!</p>
+                  </div>
+                  
+                  <div className="mt-8 text-right">
+                    <p className="text-sm font-medium">For Jeevus Naturals</p>
+                    <div className="mt-8 border-t border-gray-300 pt-2">
+                      <p className="text-sm">Authorized Signatory</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
