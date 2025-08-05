@@ -125,7 +125,19 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
         <head>
           <title>Invoice ${invoiceData.invoice_number}</title>
           <style>
-            body { font-family: Arial, sans-serif; margin: 20px; font-size: 12px; }
+            @page {
+              size: A4;
+              margin: 0.5in;
+            }
+            body { 
+              font-family: Arial, sans-serif; 
+              margin: 0; 
+              padding: 20px;
+              font-size: 12px; 
+              width: 210mm;
+              min-height: 297mm;
+              box-sizing: border-box;
+            }
             .header { text-align: center; margin-bottom: 30px; }
             .company-logo { height: 60px; width: auto; margin: 0 auto 10px; }
             .company-name { font-size: 24px; font-weight: bold; color: #333; margin: 10px 0; }
@@ -149,7 +161,12 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
             .notes { margin-top: 20px; }
             .footer { margin-top: 40px; text-align: center; font-size: 10px; }
             @media print {
-              body { margin: 0; }
+              body { 
+                margin: 0; 
+                padding: 0.5in;
+                width: auto;
+                min-height: auto;
+              }
               .no-print { display: none; }
             }
           </style>
