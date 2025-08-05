@@ -173,15 +173,11 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
         </head>
         <body>
           <div class="header">
-            <div style="display: flex; align-items: center; justify-content: center; gap: 20px; margin-bottom: 20px;">
-              ${companySettings?.company_logo_url ? `<img src="${companySettings.company_logo_url}" alt="Company Logo" class="company-logo" />` : ''}
-              <div>
-                <div class="company-name">${companySettings?.company_name || 'JEEVUS NATURALS'}</div>
-                ${companySettings?.address ? `<div class="company-info">${companySettings.address}</div>` : ''}
-                ${companySettings?.phone_number ? `<div class="company-info">Ph: ${companySettings.phone_number}</div>` : ''}
-                ${companySettings?.gstin ? `<div class="company-info">GSTIN: ${companySettings.gstin}</div>` : ''}
-              </div>
-            </div>
+            ${companySettings?.company_logo_url ? `<img src="${companySettings.company_logo_url}" alt="Company Logo" class="company-logo" />` : ''}
+            <div class="company-name">${companySettings?.company_name || 'JEEVUS NATURALS'}</div>
+            ${companySettings?.address ? `<div class="company-info">${companySettings.address}</div>` : ''}
+            ${companySettings?.phone_number ? `<div class="company-info">Ph: ${companySettings.phone_number}</div>` : ''}
+            ${companySettings?.gstin ? `<div class="company-info">GSTIN: ${companySettings.gstin}</div>` : ''}
             <div class="invoice-title">TAX INVOICE</div>
           </div>
           
@@ -228,76 +224,133 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
             </tbody>
           </table>
           
-          <div class="summary-grid">
+          <div style="display: grid; grid-template-columns: 1fr 300px; gap: 20px; margin: 20px 0;">
             <div>
-              <div class="section-title">HSN/SAC wise Tax Breakdown:</div>
-              <table class="hsn-table table">
-                <thead>
-                  <tr>
-                    <th>HSN/SAC</th>
-                    <th>GST%</th>
-                    <th>Taxable Amount</th>
-                    <th>CGST</th>
-                    <th>SGST</th>
-                    <th>Total Tax</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${hsnBreakdown.map(hsn => `
-                    <tr>
-                      <td class="text-center">${hsn.hsn}</td>
-                      <td class="text-center">${hsn.gstRate}%</td>
-                      <td class="text-right">₹${hsn.taxableAmount.toFixed(2)}</td>
-                      <td class="text-right">₹${hsn.cgstAmount.toFixed(2)}</td>
-                      <td class="text-right">₹${hsn.sgstAmount.toFixed(2)}</td>
-                      <td class="text-right">₹${hsn.totalTax.toFixed(2)}</td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
+              <div class="detail-row"><strong>Total:</strong> ₹${invoiceData.total_amount.toFixed(2)}</div>
+              
+              <div style="margin-top: 20px;">
+                <div class="detail-row"><strong>Invoice Amount In Words:</strong></div>
+                <div class="detail-row">Rupees Only</div>
+              </div>
+              
+              <div style="margin-top: 15px;">
+                <div class="detail-row"><strong>Payment Mode:</strong> ${invoiceData.payment_method?.charAt(0).toUpperCase() + invoiceData.payment_method?.slice(1) || 'Cash'}</div>
+                <div class="detail-row"><strong>Total:</strong> ₹${invoiceData.total_amount.toFixed(2)}</div>
+                <div class="detail-row"><strong>Received:</strong> ₹${invoiceData.total_amount.toFixed(2)}</div>
+                <div class="detail-row"><strong>Balance:</strong> ₹0.00</div>
+              </div>
             </div>
             
-            <div class="totals-section">
-              <div class="total-row">
-                <span>Subtotal:</span>
+            <div style="text-align: right;">
+              <div style="display: flex; justify-content: space-between; margin: 3px 0;">
+                <span>Sub Total:</span>
                 <span>₹${invoiceData.subtotal.toFixed(2)}</span>
               </div>
-              <div class="total-row">
-                <span>Tax Amount:</span>
-                <span>₹${invoiceData.tax_amount.toFixed(2)}</span>
+              <div style="display: flex; justify-content: space-between; margin: 3px 0;">
+                <span>Round Off:</span>
+                <span>₹0.00</span>
               </div>
-              <div class="total-row final-total">
-                <span>Grand Total:</span>
+              <div style="display: flex; justify-content: space-between; margin: 3px 0; font-weight: bold;">
+                <span>Total:</span>
                 <span>₹${invoiceData.total_amount.toFixed(2)}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin: 3px 0;">
+                <span>You Saved:</span>
+                <span>₹0.00</span>
+              </div>
+              
+              <div style="margin-top: 15px;">
+                <div class="detail-row"><strong>Previous Due:</strong> ₹0.00</div>
+                <div class="detail-row"><strong>Current Balance:</strong> ₹${invoiceData.total_amount.toFixed(2)}</div>
+              </div>
+            </div>
+          </div>
+
+          <table class="table" style="margin-top: 30px;">
+            <thead>
+              <tr>
+                <th rowspan="2" style="text-align: center; vertical-align: middle;">HSN/SAC</th>
+                <th rowspan="2" style="text-align: center; vertical-align: middle;">Taxable amount</th>
+                <th colspan="2" style="text-align: center;">CGST</th>
+                <th colspan="2" style="text-align: center;">SGST</th>
+                <th rowspan="2" style="text-align: center; vertical-align: middle;">Total Tax Amount</th>
+              </tr>
+              <tr>
+                <th style="text-align: center;">Rate</th>
+                <th style="text-align: center;">Amount</th>
+                <th style="text-align: center;">Rate</th>
+                <th style="text-align: center;">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${hsnBreakdown.map(hsn => `
+                <tr>
+                  <td class="text-center">${hsn.hsn}</td>
+                  <td class="text-right">₹${hsn.taxableAmount.toFixed(2)}</td>
+                  <td class="text-center">${(hsn.gstRate / 2).toFixed(1)}%</td>
+                  <td class="text-right">₹${hsn.cgstAmount.toFixed(2)}</td>
+                  <td class="text-center">${(hsn.gstRate / 2).toFixed(1)}%</td>
+                  <td class="text-right">₹${hsn.sgstAmount.toFixed(2)}</td>
+                  <td class="text-right">₹${hsn.totalTax.toFixed(2)}</td>
+                </tr>
+              `).join('')}
+              <tr style="font-weight: bold; background-color: #f5f5f5;">
+                <td class="text-center">Total</td>
+                <td class="text-right">₹${hsnBreakdown.reduce((sum, item) => sum + item.taxableAmount, 0).toFixed(2)}</td>
+                <td class="text-center">-</td>
+                <td class="text-right">₹${hsnBreakdown.reduce((sum, item) => sum + item.cgstAmount, 0).toFixed(2)}</td>
+                <td class="text-center">-</td>
+                <td class="text-right">₹${hsnBreakdown.reduce((sum, item) => sum + item.sgstAmount, 0).toFixed(2)}</td>
+                <td class="text-right">₹${hsnBreakdown.reduce((sum, item) => sum + item.totalTax, 0).toFixed(2)}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px;">
+            <div style="border: 1px solid #333; padding: 15px;">
+              <div class="section-title">Bank Details</div>
+              <div style="display: flex; margin-top: 10px;">
+                <div style="width: 60px; height: 60px; background-color: #f0f0f0; margin-right: 15px; display: flex; align-items: center; justify-content: center; font-size: 10px; text-align: center;">
+                  QR Code
+                </div>
+                <div>
+                  ${invoiceData.bank_account ? `
+                    <div class="detail-row"><strong>Name:</strong> ${invoiceData.bank_account.bank_name}</div>
+                    <div class="detail-row"><strong>Account No.:</strong> ${invoiceData.bank_account.account_number}</div>
+                    <div class="detail-row"><strong>IFSC code:</strong> ${invoiceData.bank_account.ifsc_code}</div>
+                    <div class="detail-row"><strong>Account Holder's Name:</strong> ${invoiceData.bank_account.account_holder_name}</div>
+                  ` : `
+                    <div class="detail-row"><strong>Name:</strong> UNION BANK OF INDIA</div>
+                    <div class="detail-row"><strong>Branch:</strong> KUNDARA</div>
+                    <div class="detail-row"><strong>Account No.:</strong> 284511100001097</div>
+                    <div class="detail-row"><strong>IFSC code:</strong> UBIN0528459</div>
+                    <div class="detail-row"><strong>Account Holder's Name:</strong> JEEVUS NATURALS</div>
+                  `}
+                </div>
+              </div>
+            </div>
+            
+            <div style="border: 1px solid #333; padding: 15px;">
+              <div class="section-title">Terms and conditions</div>
+              <p style="margin: 10px 0; font-size: 11px;">Thanks for doing business with us!</p>
+              
+              <div style="margin-top: 40px; text-align: right;">
+                <p style="font-weight: bold; margin-bottom: 30px;">For Jeevus Naturals</p>
+                <div style="border-top: 1px solid #333; padding-top: 10px;">
+                  <p style="font-size: 11px;">Authorized Signatory</p>
+                </div>
               </div>
             </div>
           </div>
           
-          ${invoiceData.bank_account ? `
-            <div class="bank-details">
-              <div class="section-title">Bank Details:</div>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 10px;">
-                <div>
-                  <div class="detail-row"><strong>Account Name:</strong> ${invoiceData.bank_account.account_name}</div>
-                  <div class="detail-row"><strong>Account Number:</strong> ${invoiceData.bank_account.account_number}</div>
-                  <div class="detail-row"><strong>Bank Name:</strong> ${invoiceData.bank_account.bank_name}</div>
-                </div>
-                <div>
-                  <div class="detail-row"><strong>IFSC Code:</strong> ${invoiceData.bank_account.ifsc_code}</div>
-                  <div class="detail-row"><strong>Account Holder:</strong> ${invoiceData.bank_account.account_holder_name}</div>
-                </div>
-              </div>
-            </div>
-          ` : ''}
-          
           ${invoiceData.notes ? `
-            <div class="notes">
+            <div style="margin-top: 30px;">
               <div class="section-title">Notes:</div>
               <div style="margin-top: 5px;">${invoiceData.notes}</div>
             </div>
           ` : ''}
           
-          <div class="footer">
+          <div style="margin-top: 40px; text-align: center; font-size: 10px;">
             <p>Thank you for your business!</p>
           </div>
           
@@ -461,30 +514,26 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
           <div className="bg-white p-8 border rounded-lg">
             {/* Header */}
             <div className="text-center mb-8">
-              <div className="flex items-center justify-center gap-4 mb-4">
-                {companySettings?.company_logo_url && (
-                  <img 
-                    src={companySettings.company_logo_url} 
-                    alt="Company Logo" 
-                    className="h-16 w-16 object-contain"
-                  />
-                )}
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-800">
-                    {companySettings?.company_name || 'JEEVUS NATURALS'}
-                  </h1>
-                  {companySettings?.address && (
-                    <p className="text-sm text-gray-600 mt-1">{companySettings.address}</p>
-                  )}
-                  {companySettings?.phone_number && (
-                    <p className="text-sm text-gray-600">Ph: {companySettings.phone_number}</p>
-                  )}
-                  {companySettings?.gstin && (
-                    <p className="text-sm text-gray-600">GSTIN: {companySettings.gstin}</p>
-                  )}
-                </div>
-              </div>
-              <h2 className="text-xl text-gray-600 mt-2">TAX INVOICE</h2>
+              {companySettings?.company_logo_url && (
+                <img 
+                  src={companySettings.company_logo_url} 
+                  alt="Company Logo" 
+                  className="h-16 w-16 object-contain mx-auto mb-4"
+                />
+              )}
+              <h1 className="text-3xl font-bold text-gray-800">
+                {companySettings?.company_name || 'JEEVUS NATURALS'}
+              </h1>
+              {companySettings?.address && (
+                <p className="text-sm text-gray-600 mt-1">{companySettings.address}</p>
+              )}
+              {companySettings?.phone_number && (
+                <p className="text-sm text-gray-600">Ph: {companySettings.phone_number}</p>
+              )}
+              {companySettings?.gstin && (
+                <p className="text-sm text-gray-600">GSTIN: {companySettings.gstin}</p>
+              )}
+              <h2 className="text-xl text-gray-600 mt-4">TAX INVOICE</h2>
             </div>
 
             {/* Invoice Details */}
