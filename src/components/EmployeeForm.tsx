@@ -33,63 +33,98 @@ const employeeSchema = z.object({
 type EmployeeFormData = z.infer<typeof employeeSchema>;
 
 interface EmployeeFormProps {
+  employee?: any;
   onSuccess?: () => void;
 }
 
-export function EmployeeForm({ onSuccess }: EmployeeFormProps) {
+export function EmployeeForm({ employee, onSuccess }: EmployeeFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const isEditing = !!employee;
 
   const form = useForm<EmployeeFormData>({
     resolver: zodResolver(employeeSchema),
     defaultValues: {
-      sector: "sales",
-      salary: 0,
+      full_name: employee?.full_name || "",
+      email: employee?.email || "",
+      phone: employee?.phone || "",
+      employee_id: employee?.employee_id || "",
+      designation: employee?.designation || "",
+      department: employee?.department || "",
+      sector: employee?.sector || "sales",
+      date_of_joining: employee?.date_of_joining ? new Date(employee.date_of_joining) : undefined,
+      salary: employee?.salary || 0,
+      username: employee?.username || "",
+      password: "",
     },
   });
 
   const onSubmit = async (data: EmployeeFormData) => {
     setIsSubmitting(true);
     try {
-      // Get the current session
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('You must be logged in to create employees');
-      }
-
-      // Call the edge function to create the employee
-      const { data: result, error } = await supabase.functions.invoke('create-employee', {
-        body: {
+      if (isEditing) {
+        // Update existing employee
+        const updateData: any = {
           full_name: data.full_name,
-          email: data.email,
-          password: data.password,
           phone: data.phone,
-          employee_id: data.employee_id,
           designation: data.designation,
           department: data.department,
           sector: data.sector,
           date_of_joining: data.date_of_joining ? format(data.date_of_joining, "yyyy-MM-dd") : null,
           salary: data.salary,
-          username: data.username,
-        },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
+        };
 
-      if (error) throw error;
+        const { error } = await supabase
+          .from('employees')
+          .update(updateData)
+          .eq('id', employee.id);
 
-      toast({
-        title: "Success",
-        description: "Employee created successfully",
-      });
+        if (error) throw error;
+
+        toast({
+          title: "Success",
+          description: "Employee updated successfully",
+        });
+      } else {
+        // Create new employee
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          throw new Error('You must be logged in to create employees');
+        }
+
+        const { data: result, error } = await supabase.functions.invoke('create-employee', {
+          body: {
+            full_name: data.full_name,
+            email: data.email,
+            password: data.password,
+            phone: data.phone,
+            employee_id: data.employee_id,
+            designation: data.designation,
+            department: data.department,
+            sector: data.sector,
+            date_of_joining: data.date_of_joining ? format(data.date_of_joining, "yyyy-MM-dd") : null,
+            salary: data.salary,
+            username: data.username,
+          },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+
+        if (error) throw error;
+
+        toast({
+          title: "Success",
+          description: "Employee created successfully",
+        });
+      }
 
       form.reset();
       onSuccess?.();
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to create employee",
+        description: error.message || `Failed to ${isEditing ? 'update' : 'create'} employee`,
         variant: "destructive",
       });
     } finally {
@@ -102,7 +137,7 @@ export function EmployeeForm({ onSuccess }: EmployeeFormProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <User className="h-5 w-5" />
-          Add Employee
+          {isEditing ? 'Edit Employee' : 'Add Employee'}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -130,7 +165,11 @@ export function EmployeeForm({ onSuccess }: EmployeeFormProps) {
                   <FormItem>
                     <FormLabel>Employee ID</FormLabel>
                     <FormControl>
-                      <Input placeholder="EMP001" {...field} />
+                      <Input 
+                        placeholder="EMP001" 
+                        disabled={isEditing}
+                        {...field} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -144,7 +183,12 @@ export function EmployeeForm({ onSuccess }: EmployeeFormProps) {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="employee@company.com" {...field} />
+                      <Input 
+                        type="email" 
+                        placeholder="employee@company.com" 
+                        disabled={isEditing}
+                        {...field} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -287,30 +331,39 @@ export function EmployeeForm({ onSuccess }: EmployeeFormProps) {
                   <FormItem>
                     <FormLabel>Username</FormLabel>
                     <FormControl>
-                      <Input placeholder="employee_username" {...field} />
+                      <Input 
+                        placeholder="employee_username" 
+                        disabled={isEditing}
+                        {...field} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="******" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {!isEditing && (
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="******" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
             </div>
 
             <Button type="submit" disabled={isSubmitting} className="w-full">
-              {isSubmitting ? "Creating..." : "Create Employee"}
+              {isSubmitting 
+                ? (isEditing ? "Updating..." : "Creating...") 
+                : (isEditing ? "Update Employee" : "Create Employee")
+              }
             </Button>
           </form>
         </Form>

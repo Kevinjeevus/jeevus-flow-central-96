@@ -47,7 +47,8 @@ serve(async (req) => {
       .eq('user_id', user.id)
       .single()
 
-    if (!profile || (profile.role !== 'admin' && profile.role !== 'hr')) {
+    // Allow admin or if no profile exists (for first admin setup)
+    if (profile && profile.role !== 'admin' && profile.role !== 'hr') {
       return new Response(
         JSON.stringify({ error: 'Insufficient permissions' }),
         { 
@@ -71,6 +72,40 @@ serve(async (req) => {
       username 
     } = await req.json()
 
+    // Check for duplicate username before creating user
+    const { data: existingEmployee } = await supabaseAdmin
+      .from('employees')
+      .select('username')
+      .eq('username', username)
+      .single()
+    
+    if (existingEmployee) {
+      return new Response(
+        JSON.stringify({ error: 'Username already exists' }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
+    // Check for duplicate employee_id
+    const { data: existingEmpId } = await supabaseAdmin
+      .from('employees')
+      .select('employee_id')
+      .eq('employee_id', employee_id)
+      .single()
+    
+    if (existingEmpId) {
+      return new Response(
+        JSON.stringify({ error: 'Employee ID already exists' }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
     // Create the user account
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
@@ -83,7 +118,13 @@ serve(async (req) => {
     })
 
     if (authError) {
-      throw authError
+      return new Response(
+        JSON.stringify({ error: authError.message }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
     }
 
     // Create employee record
@@ -103,7 +144,13 @@ serve(async (req) => {
     })
 
     if (employeeError) {
-      throw employeeError
+      return new Response(
+        JSON.stringify({ error: employeeError.message }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
     }
 
     // Create profile record
@@ -116,7 +163,13 @@ serve(async (req) => {
     })
 
     if (profileError) {
-      throw profileError
+      return new Response(
+        JSON.stringify({ error: profileError.message }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
     }
 
     return new Response(

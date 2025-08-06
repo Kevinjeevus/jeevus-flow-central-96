@@ -32,6 +32,7 @@ export default function Employees() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editEmployee, setEditEmployee] = useState<Employee | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [sectorFilter, setSectorFilter] = useState("all");
   const { toast } = useToast();
@@ -84,6 +85,37 @@ export default function Employees() {
     return status === "active" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800";
   };
 
+  const handleEditEmployee = (employee: Employee) => {
+    setEditEmployee(employee);
+    setIsDialogOpen(true);
+  };
+
+  const handleDeleteEmployee = async (employeeId: string) => {
+    if (!window.confirm("Are you sure you want to deactivate this employee?")) return;
+    
+    try {
+      const { error } = await supabase
+        .from("employees")
+        .update({ is_active: false })
+        .eq("id", employeeId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Employee deactivated successfully",
+      });
+      
+      fetchEmployees();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <ErpLayout>
       <div className="space-y-6">
@@ -101,8 +133,10 @@ export default function Employees() {
             </DialogTrigger>
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <EmployeeForm 
+                employee={editEmployee}
                 onSuccess={() => {
                   setIsDialogOpen(false);
+                  setEditEmployee(null);
                   fetchEmployees();
                 }}
               />
@@ -266,41 +300,15 @@ export default function Employees() {
                             <Button 
                               variant="ghost" 
                               size="sm"
-                              onClick={() => {
-                                toast({
-                                  title: "Edit Employee",
-                                  description: "Please use the employee management system to edit employee details",
-                                });
-                              }}
+                              onClick={() => handleEditEmployee(employee)}
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button 
                               variant="ghost" 
                               size="sm"
-                              onClick={async () => {
-                                try {
-                                  const { error } = await supabase
-                                    .from("employees")
-                                    .update({ is_active: false })
-                                    .eq("id", employee.id);
-
-                                  if (error) throw error;
-
-                                  toast({
-                                    title: "Success",
-                                    description: "Employee deactivated successfully",
-                                  });
-                                  
-                                  fetchEmployees();
-                                } catch (error: any) {
-                                  toast({
-                                    title: "Error",
-                                    description: error.message,
-                                    variant: "destructive",
-                                  });
-                                }
-                              }}
+                              onClick={() => handleDeleteEmployee(employee.id)}
+                              className="text-red-600 hover:text-red-800"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
