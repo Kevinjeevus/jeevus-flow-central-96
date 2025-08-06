@@ -1,44 +1,111 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, Save, Send } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Plus, Trash2, Save, Send, Search, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useSaleOrderNumber } from "@/hooks/useSaleOrderNumber";
+import { CustomerForm } from "./CustomerForm";
 
 interface OrderItem {
   id: string;
+  product_id?: string;
   productName: string;
   quantity: number;
   unitPrice: number;
   total: number;
 }
 
-interface SaleOrderFormProps {
-  onClose: () => void;
+interface Customer {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  city?: string;
+  status: string;
 }
 
-export function SaleOrderForm({ onClose }: SaleOrderFormProps) {
+interface Product {
+  id: string;
+  name: string;
+  sale_price: number;
+  sku: string;
+  unit: string;
+  status: string;
+}
+
+interface SaleOrderFormProps {
+  onClose: () => void;
+  onSuccess?: (orderId: string) => void;
+}
+
+export function SaleOrderForm({ onClose, onSuccess }: SaleOrderFormProps) {
   const { toast } = useToast();
+  const { orderNumber, isLoading: orderNumberLoading } = useSaleOrderNumber();
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [showNewCustomerForm, setShowNewCustomerForm] = useState(false);
+
   const [orderData, setOrderData] = useState({
-    customerName: "",
-    customerEmail: "",
-    customerPhone: "",
-    orderNumber: `SO-${Date.now()}`,
-    orderDate: new Date().toISOString().split('T')[0],
-    deliveryDate: "",
+    customer_id: "",
+    order_date: new Date().toISOString().split('T')[0],
+    delivery_date: "",
     notes: "",
-    taxRate: 18,
+    tax_rate: 18,
+    status: 'pending'
   });
 
   const [items, setItems] = useState<OrderItem[]>([
-    { id: "1", productName: "", quantity: 1, unitPrice: 0, total: 0 }
+    { id: "1", product_id: "", productName: "", quantity: 1, unitPrice: 0, total: 0 }
   ]);
+
+  useEffect(() => {
+    fetchCustomers();
+    fetchProducts();
+  }, []);
+
+  const fetchCustomers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('status', 'active')
+        .order('name');
+
+      if (error) throw error;
+      setCustomers(data || []);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+    }
+  };
+
+  const fetchProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('status', 'active')
+        .order('name');
+
+      if (error) throw error;
+      setProducts(data || []);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    }
+  };
 
   const addItem = () => {
     const newItem: OrderItem = {
       id: Date.now().toString(),
+      product_id: "",
       productName: "",
       quantity: 1,
       unitPrice: 0,
@@ -55,6 +122,17 @@ export function SaleOrderForm({ onClose }: SaleOrderFormProps) {
     setItems(items.map(item => {
       if (item.id === id) {
         const updatedItem = { ...item, [field]: value };
+        
+        // If product is selected, update name and price
+        if (field === 'product_id' && value) {
+          const product = products.find(p => p.id === value);
+          if (product) {
+            updatedItem.productName = product.name;
+            updatedItem.unitPrice = product.sale_price;
+            updatedItem.total = updatedItem.quantity * product.sale_price;
+          }
+        }
+        
         if (field === 'quantity' || field === 'unitPrice') {
           updatedItem.total = updatedItem.quantity * updatedItem.unitPrice;
         }
@@ -65,119 +143,223 @@ export function SaleOrderForm({ onClose }: SaleOrderFormProps) {
   };
 
   const subtotal = items.reduce((sum, item) => sum + item.total, 0);
-  const taxAmount = (subtotal * orderData.taxRate) / 100;
+  const taxAmount = (subtotal * orderData.tax_rate) / 100;
   const total = subtotal + taxAmount;
 
-  const handleSave = () => {
-    toast({
-      title: "Order Saved",
-      description: "Sale order has been saved as draft",
-    });
-    onClose();
+  const filteredCustomers = customers.filter(customer =>
+    customer.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
+    customer.email?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+    customer.phone?.includes(customerSearch)
+  );
+
+  const handleSave = async (status: 'pending' | 'confirmed' = 'pending') => {
+    try {
+      setIsLoading(true);
+
+      // Validation
+      if (!orderData.customer_id) {
+        toast({
+          title: "Error",
+          description: "Please select a customer",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const validItems = items.filter(item => item.product_id && item.quantity > 0);
+      if (validItems.length === 0) {
+        toast({
+          title: "Error", 
+          description: "Please add at least one valid item",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Insert sale order
+      const { data: orderData_, error: orderError } = await supabase
+        .from('sales_orders')
+        .insert({
+          customer_id: orderData.customer_id,
+          order_number: orderNumber,
+          order_date: orderData.order_date,
+          delivery_date: orderData.delivery_date || null,
+          subtotal,
+          tax_amount: taxAmount,
+          total_amount: total,
+          notes: orderData.notes,
+          status
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // Insert order items
+      const itemsToInsert = validItems.map(item => ({
+        sales_order_id: orderData_.id,
+        product_id: item.product_id,
+        quantity: item.quantity,
+        unit_price: item.unitPrice,
+        total_price: item.total
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('sales_order_items')
+        .insert(itemsToInsert);
+
+      if (itemsError) throw itemsError;
+
+      toast({
+        title: status === 'pending' ? "Order Saved" : "Order Confirmed",
+        description: status === 'pending' 
+          ? "Sale order has been saved as draft" 
+          : "Sale order has been confirmed",
+      });
+
+      onSuccess?.(orderData_.id);
+      onClose();
+    } catch (error) {
+      console.error('Error saving order:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save order. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleConfirm = () => {
-    toast({
-      title: "Order Confirmed",
-      description: "Sale order has been confirmed and sent to customer",
-    });
-    onClose();
+  const handleNewCustomerSuccess = () => {
+    setShowNewCustomerForm(false);
+    fetchCustomers();
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Create Sale Order</h2>
-          <p className="text-muted-foreground">Create a new customer order</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button variant="outline" onClick={handleSave}>
-            <Save className="h-4 w-4 mr-2" />
-            Save Draft
-          </Button>
-          <Button className="bg-gradient-primary hover:bg-gradient-primary/90" onClick={handleConfirm}>
-            <Send className="h-4 w-4 mr-2" />
-            Confirm Order
-          </Button>
-        </div>
-      </div>
+    <>
+      <Dialog open={showNewCustomerForm} onOpenChange={setShowNewCustomerForm}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Add New Customer</DialogTitle>
+          </DialogHeader>
+          <CustomerForm onClose={() => setShowNewCustomerForm(false)} onSuccess={handleNewCustomerSuccess} />
+        </DialogContent>
+      </Dialog>
 
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Customer Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="customerName">Customer Name</Label>
-              <Input
-                id="customerName"
-                value={orderData.customerName}
-                onChange={(e) => setOrderData({...orderData, customerName: e.target.value})}
-                placeholder="Enter customer name"
-              />
-            </div>
-            <div>
-              <Label htmlFor="customerEmail">Email</Label>
-              <Input
-                id="customerEmail"
-                type="email"
-                value={orderData.customerEmail}
-                onChange={(e) => setOrderData({...orderData, customerEmail: e.target.value})}
-                placeholder="customer@example.com"
-              />
-            </div>
-            <div>
-              <Label htmlFor="customerPhone">Phone</Label>
-              <Input
-                id="customerPhone"
-                value={orderData.customerPhone}
-                onChange={(e) => setOrderData({...orderData, customerPhone: e.target.value})}
-                placeholder="Enter phone number"
-              />
-            </div>
-          </CardContent>
-        </Card>
+      <div className="max-w-4xl mx-auto p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold">Create Sale Order</h2>
+            <p className="text-muted-foreground">Create a new customer order</p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => handleSave('pending')}
+              disabled={isLoading}
+            >
+              <Save className="h-4 w-4 mr-2" />
+              Save Draft
+            </Button>
+            <Button 
+              className="bg-gradient-primary hover:bg-gradient-primary/90" 
+              onClick={() => handleSave('confirmed')}
+              disabled={isLoading}
+            >
+              <Send className="h-4 w-4 mr-2" />
+              Confirm Order
+            </Button>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Order Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="orderNumber">Order Number</Label>
-              <Input
-                id="orderNumber"
-                value={orderData.orderNumber}
-                onChange={(e) => setOrderData({...orderData, orderNumber: e.target.value})}
-                placeholder="SO-001"
-              />
-            </div>
-            <div>
-              <Label htmlFor="orderDate">Order Date</Label>
-              <Input
-                id="orderDate"
-                type="date"
-                value={orderData.orderDate}
-                onChange={(e) => setOrderData({...orderData, orderDate: e.target.value})}
-              />
-            </div>
-            <div>
-              <Label htmlFor="deliveryDate">Expected Delivery</Label>
-              <Input
-                id="deliveryDate"
-                type="date"
-                value={orderData.deliveryDate}
-                onChange={(e) => setOrderData({...orderData, deliveryDate: e.target.value})}
-              />
-            </div>
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Customer Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="customer">Select Customer</Label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input
+                      placeholder="Search customers..."
+                      value={customerSearch}
+                      onChange={(e) => setCustomerSearch(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowNewCustomerForm(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    New
+                  </Button>
+                </div>
+                
+                {customerSearch && (
+                  <div className="mt-2 max-h-32 overflow-y-auto border rounded-md">
+                    {filteredCustomers.map((customer) => (
+                      <div
+                        key={customer.id}
+                        className="p-2 hover:bg-accent cursor-pointer border-b last:border-b-0"
+                        onClick={() => {
+                          setOrderData({...orderData, customer_id: customer.id});
+                          setCustomerSearch(customer.name);
+                        }}
+                      >
+                        <div className="font-medium">{customer.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {customer.email} • {customer.phone}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Order Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="orderNumber">Order Number</Label>
+                <Input
+                  id="orderNumber"
+                  value={orderNumber}
+                  disabled
+                  placeholder="SO-001"
+                />
+              </div>
+              <div>
+                <Label htmlFor="orderDate">Order Date</Label>
+                <Input
+                  id="orderDate"
+                  type="date"
+                  value={orderData.order_date}
+                  onChange={(e) => setOrderData({...orderData, order_date: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label htmlFor="deliveryDate">Expected Delivery</Label>
+                <Input
+                  id="deliveryDate"
+                  type="date"
+                  value={orderData.delivery_date}
+                  onChange={(e) => setOrderData({...orderData, delivery_date: e.target.value})}
+                />
+              </div>
+            </CardContent>
+          </Card>
       </div>
 
       <Card>
@@ -191,11 +373,21 @@ export function SaleOrderForm({ onClose }: SaleOrderFormProps) {
               <div key={item.id} className="grid grid-cols-12 gap-4 items-end">
                 <div className="col-span-5">
                   <Label>Product</Label>
-                  <Input
-                    value={item.productName}
-                    onChange={(e) => updateItem(item.id, 'productName', e.target.value)}
-                    placeholder="Enter product name"
-                  />
+                  <Select
+                    value={item.product_id}
+                    onValueChange={(value) => updateItem(item.id, 'product_id', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select product" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products.map((product) => (
+                        <SelectItem key={product.id} value={product.id}>
+                          {product.name} - ₹{product.sale_price}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="col-span-2">
                   <Label>Quantity</Label>
@@ -267,7 +459,7 @@ export function SaleOrderForm({ onClose }: SaleOrderFormProps) {
               <span>₹{subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
-              <span>Tax ({orderData.taxRate}%):</span>
+              <span>Tax ({orderData.tax_rate}%):</span>
               <span>₹{taxAmount.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-lg font-bold border-t pt-2">
@@ -276,7 +468,8 @@ export function SaleOrderForm({ onClose }: SaleOrderFormProps) {
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
