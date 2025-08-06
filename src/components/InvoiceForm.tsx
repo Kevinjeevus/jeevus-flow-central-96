@@ -24,6 +24,8 @@ interface InvoiceItem {
   productName: string;
   quantity: number;
   unitPrice: number;
+  gstRate: number;
+  taxAmount: number;
   total: number;
 }
 
@@ -39,6 +41,7 @@ interface Product {
   name: string;
   sale_price: number;
   sku: string;
+  gst_rate: number;
 }
 
 interface InvoiceFormProps {
@@ -69,7 +72,6 @@ export function InvoiceForm({ onClose, onSuccess }: InvoiceFormProps) {
     invoiceDate: new Date().toISOString().split('T')[0],
     dueDate: "",
     notes: "",
-    taxRate: 18,
     payment_method: "cash",
     payment_account_id: "",
     cheque_id: "",
@@ -77,7 +79,7 @@ export function InvoiceForm({ onClose, onSuccess }: InvoiceFormProps) {
   });
 
   const [items, setItems] = useState<InvoiceItem[]>([
-    { id: "1", product_id: "", productName: "", quantity: 1, unitPrice: 0, total: 0 }
+    { id: "1", product_id: "", productName: "", quantity: 1, unitPrice: 0, gstRate: 0, taxAmount: 0, total: 0 }
   ]);
 
   useEffect(() => {
@@ -116,7 +118,7 @@ export function InvoiceForm({ onClose, onSuccess }: InvoiceFormProps) {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, sale_price, sku')
+        .select('id, name, sale_price, sku, gst_rate')
         .eq('status', 'active')
         .order('name');
       
@@ -180,6 +182,8 @@ export function InvoiceForm({ onClose, onSuccess }: InvoiceFormProps) {
       productName: "",
       quantity: 1,
       unitPrice: 0,
+      gstRate: 0,
+      taxAmount: 0,
       total: 0
     };
     setItems([...items, newItem]);
@@ -194,26 +198,35 @@ export function InvoiceForm({ onClose, onSuccess }: InvoiceFormProps) {
       if (item.id === id) {
         const updatedItem = { ...item, [field]: value };
         
-        // If product is selected, update name and price
-        if (field === 'product_id') {
+        // If product is selected, update name, price, and GST rate
+        if (field === 'product_id' && value) {
           const selectedProduct = products.find(p => p.id === value);
           if (selectedProduct) {
             updatedItem.productName = selectedProduct.name;
             updatedItem.unitPrice = selectedProduct.sale_price;
+            updatedItem.gstRate = selectedProduct.gst_rate || 0;
+            
+            // Calculate amounts
+            const subtotal = updatedItem.quantity * selectedProduct.sale_price;
+            updatedItem.taxAmount = (subtotal * updatedItem.gstRate) / 100;
+            updatedItem.total = subtotal + updatedItem.taxAmount;
           }
         }
         
-        if (field === 'quantity' || field === 'unitPrice' || field === 'product_id') {
-          updatedItem.total = updatedItem.quantity * updatedItem.unitPrice;
+        if (field === 'quantity' || field === 'unitPrice') {
+          const subtotal = updatedItem.quantity * updatedItem.unitPrice;
+          updatedItem.taxAmount = (subtotal * updatedItem.gstRate) / 100;
+          updatedItem.total = subtotal + updatedItem.taxAmount;
         }
+        
         return updatedItem;
       }
       return item;
     }));
   };
 
-  const subtotal = items.reduce((sum, item) => sum + item.total, 0);
-  const taxAmount = (subtotal * invoiceData.taxRate) / 100;
+  const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+  const taxAmount = items.reduce((sum, item) => sum + item.taxAmount, 0);
   const total = subtotal + taxAmount;
 
   const handleSave = async (status: 'draft' | 'sent' = 'draft') => {
@@ -530,7 +543,7 @@ export function InvoiceForm({ onClose, onSuccess }: InvoiceFormProps) {
           <div className="space-y-4">
             {items.map((item, index) => (
               <div key={item.id} className="grid grid-cols-12 gap-4 items-end">
-                <div className="col-span-5">
+                <div className="col-span-4">
                   <Label>Product/Service</Label>
                   <Select value={item.product_id} onValueChange={(value) => updateItem(item.id, 'product_id', value)}>
                     <SelectTrigger>
@@ -541,7 +554,7 @@ export function InvoiceForm({ onClose, onSuccess }: InvoiceFormProps) {
                         <SelectItem key={product.id} value={product.id}>
                           <div>
                             <div className="font-medium">{product.name}</div>
-                            <div className="text-sm text-muted-foreground">₹{product.sale_price} - {product.sku}</div>
+                            <div className="text-sm text-muted-foreground">₹{product.sale_price} - {product.sku} ({product.gst_rate}% GST)</div>
                           </div>
                         </SelectItem>
                       ))}
@@ -564,6 +577,14 @@ export function InvoiceForm({ onClose, onSuccess }: InvoiceFormProps) {
                     value={item.unitPrice}
                     onChange={(e) => updateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
                     step="0.01"
+                  />
+                </div>
+                <div className="col-span-1">
+                  <Label>GST%</Label>
+                  <Input
+                    value={`${item.gstRate}%`}
+                    disabled
+                    className="text-center"
                   />
                 </div>
                 <div className="col-span-2">
@@ -713,7 +734,7 @@ export function InvoiceForm({ onClose, onSuccess }: InvoiceFormProps) {
               <span>₹{subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
-              <span>Tax ({invoiceData.taxRate}%):</span>
+              <span>Total Tax:</span>
               <span>₹{taxAmount.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-lg font-bold border-t pt-2">
