@@ -259,26 +259,27 @@ export function SaleOrderForm({ onClose, onSuccess }: SaleOrderFormProps) {
         </DialogContent>
       </Dialog>
 
-      <div className="max-w-4xl mx-auto p-6 space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-2xl font-bold">Create Sale Order</h2>
+            <h2 className="text-xl md:text-2xl font-bold">Create Sale Order</h2>
             <p className="text-muted-foreground">Create a new customer order</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose}>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
               Cancel
             </Button>
             <Button 
               variant="outline" 
               onClick={() => handleSave('pending')}
               disabled={isLoading}
+              className="w-full sm:w-auto"
             >
               <Save className="h-4 w-4 mr-2" />
               Save Draft
             </Button>
             <Button 
-              className="bg-gradient-primary hover:bg-gradient-primary/90" 
+              className="bg-gradient-primary hover:bg-gradient-primary/90 w-full sm:w-auto" 
               onClick={() => handleSave('confirmed')}
               disabled={isLoading}
             >
@@ -288,7 +289,7 @@ export function SaleOrderForm({ onClose, onSuccess }: SaleOrderFormProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
           <Card>
             <CardHeader>
               <CardTitle>Customer Information</CardTitle>
@@ -382,8 +383,8 @@ export function SaleOrderForm({ onClose, onSuccess }: SaleOrderFormProps) {
         <CardContent>
           <div className="space-y-4">
             {items.map((item, index) => (
-              <div key={item.id} className="grid grid-cols-12 gap-4 items-end">
-                <div className="col-span-4">
+              <div key={item.id} className="space-y-4 p-4 border rounded-lg md:space-y-0 md:grid md:grid-cols-12 md:gap-4 md:items-end md:p-0 md:border-0 md:rounded-none">
+                <div className="md:col-span-4">
                   <Label>Product</Label>
                   <Select
                     value={item.product_id}
@@ -395,13 +396,14 @@ export function SaleOrderForm({ onClose, onSuccess }: SaleOrderFormProps) {
                     <SelectContent>
                       {products.map((product) => (
                         <SelectItem key={product.id} value={product.id}>
-                          {product.name} - ₹{product.sale_price} ({product.gst_rate}% GST)
+                          <span className="block md:hidden">{product.name}</span>
+                          <span className="hidden md:block">{product.name} - ₹{product.sale_price} ({product.gst_rate}% GST)</span>
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="col-span-2">
+                <div className="grid grid-cols-2 gap-2 md:col-span-2 md:grid-cols-1">
                   <Label>Quantity</Label>
                   <Input
                     type="number"
@@ -410,7 +412,7 @@ export function SaleOrderForm({ onClose, onSuccess }: SaleOrderFormProps) {
                     min="1"
                   />
                 </div>
-                <div className="col-span-2">
+                <div className="grid grid-cols-2 gap-2 md:col-span-2 md:grid-cols-1">
                   <Label>Unit Price</Label>
                   <Input
                     type="number"
@@ -419,7 +421,7 @@ export function SaleOrderForm({ onClose, onSuccess }: SaleOrderFormProps) {
                     step="0.01"
                   />
                 </div>
-                <div className="col-span-1">
+                <div className="grid grid-cols-2 gap-2 md:col-span-1 md:grid-cols-1">
                   <Label>GST%</Label>
                   <Input
                     value={`${item.gstRate}%`}
@@ -427,21 +429,23 @@ export function SaleOrderForm({ onClose, onSuccess }: SaleOrderFormProps) {
                     className="text-center"
                   />
                 </div>
-                <div className="col-span-1">
+                <div className="grid grid-cols-2 gap-2 md:col-span-1 md:grid-cols-1">
                   <Label>Total</Label>
                   <Input
                     value={`₹${item.total.toFixed(2)}`}
                     disabled
                   />
                 </div>
-                <div className="col-span-1">
+                <div className="flex justify-end md:col-span-1">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => removeItem(item.id)}
                     disabled={items.length === 1}
+                    className="w-full md:w-auto"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4 md:mr-0" />
+                    <span className="ml-2 md:hidden">Remove</span>
                   </Button>
                 </div>
               </div>
@@ -454,7 +458,7 @@ export function SaleOrderForm({ onClose, onSuccess }: SaleOrderFormProps) {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Notes</CardTitle>
