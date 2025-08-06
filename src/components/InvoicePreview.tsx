@@ -446,20 +446,20 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-full mx-4">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Invoice Preview - {invoiceData.invoice_number}
+          <DialogTitle className="flex flex-col sm:flex-row sm:items-center gap-2 text-base sm:text-lg">
+            <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
+            <span className="break-all">Invoice Preview - {invoiceData.invoice_number}</span>
           </DialogTitle>
         </DialogHeader>
         
         <div className="space-y-6">
           {/* Action Buttons */}
-          <div className="flex gap-2 justify-between border-b pb-4">
-            <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2 sm:justify-between border-b pb-4">
+            <div className="flex flex-wrap gap-2">
               {onEdit && (
-                <Button variant="outline" onClick={onEdit}>
+                <Button variant="outline" onClick={onEdit} className="flex-1 sm:flex-none">
                   <Edit className="h-4 w-4 mr-2" />
                   Edit
                 </Button>
@@ -467,12 +467,12 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
               {onDelete && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="outline" className="text-destructive hover:text-destructive">
+                    <Button variant="outline" className="text-destructive hover:text-destructive flex-1 sm:flex-none">
                       <Trash2 className="h-4 w-4 mr-2" />
                       Delete
                     </Button>
                   </AlertDialogTrigger>
-                  <AlertDialogContent>
+                  <AlertDialogContent className="w-full max-w-md mx-4">
                     <AlertDialogHeader>
                       <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                       <AlertDialogDescription>
@@ -480,12 +480,12 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
                         {invoiceData.invoice_number} and remove all associated data.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                      <AlertDialogCancel className="w-full sm:w-auto">Cancel</AlertDialogCancel>
                       <AlertDialogAction
                         onClick={handleDeleteInvoice}
                         disabled={isDeleting}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full sm:w-auto"
                       >
                         {isDeleting ? "Deleting..." : "Delete"}
                       </AlertDialogAction>
@@ -494,16 +494,17 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
                 </AlertDialog>
               )}
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={shareInvoice}>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={shareInvoice} className="flex-1 sm:flex-none">
                 <Share className="h-4 w-4 mr-2" />
-                Share
+                <span className="sm:inline">Share</span>
               </Button>
-              <Button variant="outline" onClick={generatePDF} disabled={isGeneratingPDF}>
+              <Button variant="outline" onClick={generatePDF} disabled={isGeneratingPDF} className="flex-1 sm:flex-none">
                 <Download className="h-4 w-4 mr-2" />
-                {isGeneratingPDF ? "Generating..." : "Download PDF"}
+                <span className="hidden sm:inline">{isGeneratingPDF ? "Generating..." : "Download PDF"}</span>
+                <span className="sm:hidden">PDF</span>
               </Button>
-              <Button onClick={generatePDF} disabled={isGeneratingPDF}>
+              <Button onClick={generatePDF} disabled={isGeneratingPDF} className="flex-1 sm:flex-none">
                 <Printer className="h-4 w-4 mr-2" />
                 Print
               </Button>
@@ -511,36 +512,36 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
           </div>
 
           {/* Invoice Content */}
-          <div className="bg-white p-8 border rounded-lg">
+          <div className="bg-white p-4 md:p-8 border rounded-lg">
             {/* Header */}
-            <div className="text-center mb-8">
+            <div className="text-center mb-6 md:mb-8">
               {companySettings?.company_logo_url && (
                 <img 
                   src={companySettings.company_logo_url} 
                   alt="Company Logo" 
-                  className="h-16 w-16 object-contain mx-auto mb-4"
+                  className="h-12 w-12 md:h-16 md:w-16 object-contain mx-auto mb-4"
                 />
               )}
-              <h1 className="text-3xl font-bold text-gray-800">
-                {companySettings?.company_name || 'JEEVUS NATURALS'}
+              <h1 className="text-xl md:text-3xl font-bold text-gray-800">
+                {companySettings?.company_name || "JEEVUS NATURALS"}
               </h1>
               {companySettings?.address && (
-                <p className="text-sm text-gray-600 mt-1">{companySettings.address}</p>
+                <p className="text-xs md:text-sm text-gray-600 mt-1">{companySettings.address}</p>
               )}
               {companySettings?.phone_number && (
-                <p className="text-sm text-gray-600">Ph: {companySettings.phone_number}</p>
+                <p className="text-xs md:text-sm text-gray-600">Ph: {companySettings.phone_number}</p>
               )}
               {companySettings?.gstin && (
-                <p className="text-sm text-gray-600">GSTIN: {companySettings.gstin}</p>
+                <p className="text-xs md:text-sm text-gray-600">GSTIN: {companySettings.gstin}</p>
               )}
-              <h2 className="text-xl text-gray-600 mt-4">TAX INVOICE</h2>
+              <h2 className="text-lg md:text-xl text-gray-600 mt-4">TAX INVOICE</h2>
             </div>
 
             {/* Invoice Details */}
-            <div className="grid grid-cols-2 gap-8 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-6 md:mb-8">
               <div>
-                <h3 className="text-lg font-semibold mb-3">Bill To:</h3>
-                <div className="text-gray-700">
+                <h3 className="text-base md:text-lg font-semibold mb-3">Bill To:</h3>
+                <div className="text-gray-700 text-sm md:text-base">
                   <p className="font-medium">{invoiceData.customer.name}</p>
                   {invoiceData.customer.email && <p>{invoiceData.customer.email}</p>}
                   {invoiceData.customer.phone && <p>{invoiceData.customer.phone}</p>}
@@ -548,8 +549,8 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
                 </div>
               </div>
               <div>
-                <h3 className="text-lg font-semibold mb-3">Invoice Details:</h3>
-                <div className="text-gray-700">
+                <h3 className="text-base md:text-lg font-semibold mb-3">Invoice Details:</h3>
+                <div className="text-gray-700 text-sm md:text-base">
                   <p><span className="font-medium">Invoice #:</span> {invoiceData.invoice_number}</p>
                   <p><span className="font-medium">Date:</span> {new Date(invoiceData.invoice_date).toLocaleDateString()}</p>
                 </div>
@@ -557,29 +558,29 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
             </div>
 
             {/* Items Table */}
-            <div className="mb-8">
-              <table className="w-full border-collapse border border-gray-300">
+            <div className="mb-6 md:mb-8 overflow-x-auto">
+              <table className="w-full border-collapse border border-gray-300 min-w-[600px]">
                 <thead>
                   <tr className="bg-gray-50">
-                    <th className="border border-gray-300 px-2 py-3 text-left text-sm">Item name</th>
-                    <th className="border border-gray-300 px-2 py-3 text-center text-sm">HSN/SAC</th>
-                    <th className="border border-gray-300 px-2 py-3 text-center text-sm">Quantity</th>
-                    <th className="border border-gray-300 px-2 py-3 text-center text-sm">Unit</th>
-                    <th className="border border-gray-300 px-2 py-3 text-right text-sm">Price/Unit</th>
-                    <th className="border border-gray-300 px-2 py-3 text-center text-sm">GST%</th>
-                    <th className="border border-gray-300 px-2 py-3 text-right text-sm">Amount</th>
+                    <th className="border border-gray-300 px-1 md:px-2 py-2 md:py-3 text-left text-xs md:text-sm">Item name</th>
+                    <th className="border border-gray-300 px-1 md:px-2 py-2 md:py-3 text-center text-xs md:text-sm">HSN/SAC</th>
+                    <th className="border border-gray-300 px-1 md:px-2 py-2 md:py-3 text-center text-xs md:text-sm">Qty</th>
+                    <th className="border border-gray-300 px-1 md:px-2 py-2 md:py-3 text-center text-xs md:text-sm">Unit</th>
+                    <th className="border border-gray-300 px-1 md:px-2 py-2 md:py-3 text-right text-xs md:text-sm">Price/Unit</th>
+                    <th className="border border-gray-300 px-1 md:px-2 py-2 md:py-3 text-center text-xs md:text-sm">GST%</th>
+                    <th className="border border-gray-300 px-1 md:px-2 py-2 md:py-3 text-right text-xs md:text-sm">Amount</th>
                   </tr>
                 </thead>
                 <tbody>
                   {invoiceData.items.map((item, index) => (
                     <tr key={index}>
-                      <td className="border border-gray-300 px-2 py-3 text-sm">{item.product_name}</td>
-                      <td className="border border-gray-300 px-2 py-3 text-center text-sm">{item.hsn_code || 'N/A'}</td>
-                      <td className="border border-gray-300 px-2 py-3 text-center text-sm">{item.quantity}</td>
-                      <td className="border border-gray-300 px-2 py-3 text-center text-sm">{item.unit || 'Nos'}</td>
-                      <td className="border border-gray-300 px-2 py-3 text-right text-sm">₹{item.unit_price.toFixed(2)}</td>
-                      <td className="border border-gray-300 px-2 py-3 text-center text-sm">{item.gst_rate || 18}%</td>
-                      <td className="border border-gray-300 px-2 py-3 text-right text-sm">₹{item.total_price.toFixed(2)}</td>
+                      <td className="border border-gray-300 px-1 md:px-2 py-2 md:py-3 text-xs md:text-sm">{item.product_name}</td>
+                      <td className="border border-gray-300 px-1 md:px-2 py-2 md:py-3 text-center text-xs md:text-sm">{item.hsn_code || "N/A"}</td>
+                      <td className="border border-gray-300 px-1 md:px-2 py-2 md:py-3 text-center text-xs md:text-sm">{item.quantity}</td>
+                      <td className="border border-gray-300 px-1 md:px-2 py-2 md:py-3 text-center text-xs md:text-sm">{item.unit || "Nos"}</td>
+                      <td className="border border-gray-300 px-1 md:px-2 py-2 md:py-3 text-right text-xs md:text-sm">₹{item.unit_price.toFixed(2)}</td>
+                      <td className="border border-gray-300 px-1 md:px-2 py-2 md:py-3 text-center text-xs md:text-sm">{item.gst_rate || 18}%</td>
+                      <td className="border border-gray-300 px-1 md:px-2 py-2 md:py-3 text-right text-xs md:text-sm">₹{item.total_price.toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -587,113 +588,113 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
             </div>
 
             {/* Summary Section */}
-            <div className="grid grid-cols-2 gap-8 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-6 md:mb-8">
               <div>
-                <div className="text-right pr-8">
-                  <div className="text-lg font-semibold">Total: ₹{invoiceData.total_amount.toFixed(2)}</div>
+                <div className="text-right pr-4 md:pr-8">
+                  <div className="text-base md:text-lg font-semibold">Total: ₹{invoiceData.total_amount.toFixed(2)}</div>
                 </div>
                 
-                <div className="mt-6">
-                  <p className="text-sm font-medium mb-2">Invoice Amount In Words:</p>
-                  <p className="text-sm font-semibold">Rupees Only</p>
+                <div className="mt-4 md:mt-6">
+                  <p className="text-xs md:text-sm font-medium mb-2">Invoice Amount In Words:</p>
+                  <p className="text-xs md:text-sm font-semibold">Rupees Only</p>
                 </div>
                 
                 <div className="mt-4">
-                  <p className="text-sm"><span className="font-medium">Payment Mode:</span> {invoiceData.payment_method?.charAt(0).toUpperCase() + invoiceData.payment_method?.slice(1) || 'Cash'}</p>
-                  <p className="text-sm"><span className="font-medium">Total:</span> ₹{invoiceData.total_amount.toFixed(2)}</p>
-                  <p className="text-sm"><span className="font-medium">Received:</span> ₹{invoiceData.total_amount.toFixed(2)}</p>
-                  <p className="text-sm"><span className="font-medium">Balance:</span> ₹0.00</p>
+                  <p className="text-xs md:text-sm"><span className="font-medium">Payment Mode:</span> {invoiceData.payment_method?.charAt(0).toUpperCase() + invoiceData.payment_method?.slice(1) || "Cash"}</p>
+                  <p className="text-xs md:text-sm"><span className="font-medium">Total:</span> ₹{invoiceData.total_amount.toFixed(2)}</p>
+                  <p className="text-xs md:text-sm"><span className="font-medium">Received:</span> ₹{invoiceData.total_amount.toFixed(2)}</p>
+                  <p className="text-xs md:text-sm"><span className="font-medium">Balance:</span> ₹0.00</p>
                 </div>
               </div>
               
               <div>
                 <div className="text-right">
-                  <div className="flex justify-between py-1 text-sm">
+                  <div className="flex justify-between py-1 text-xs md:text-sm">
                     <span>Sub Total:</span>
                     <span>₹{invoiceData.subtotal.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between py-1 text-sm">
+                  <div className="flex justify-between py-1 text-xs md:text-sm">
                     <span>Round Off:</span>
                     <span>₹0.00</span>
                   </div>
-                  <div className="flex justify-between py-1 text-sm font-bold">
+                  <div className="flex justify-between py-1 text-xs md:text-sm font-bold">
                     <span>Total:</span>
                     <span>₹{invoiceData.total_amount.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between py-1 text-sm">
+                  <div className="flex justify-between py-1 text-xs md:text-sm">
                     <span>You Saved:</span>
                     <span>₹0.00</span>
                   </div>
                 </div>
                 
                 <div className="mt-4 text-right">
-                  <p className="text-sm"><span className="font-medium">Previous Due:</span> ₹0.00</p>
-                  <p className="text-sm"><span className="font-medium">Current Balance:</span> ₹{invoiceData.total_amount.toFixed(2)}</p>
+                  <p className="text-xs md:text-sm"><span className="font-medium">Previous Due:</span> ₹0.00</p>
+                  <p className="text-xs md:text-sm"><span className="font-medium">Current Balance:</span> ₹{invoiceData.total_amount.toFixed(2)}</p>
                 </div>
               </div>
             </div>
 
             {/* HSN/SAC Tax Breakdown Table */}
-            <div className="mb-8">
-              <table className="w-full border-collapse border border-gray-300">
+            <div className="mb-6 md:mb-8 overflow-x-auto">
+              <table className="w-full border-collapse border border-gray-300 min-w-[600px]">
                 <thead>
                   <tr className="bg-gray-50">
-                    <th className="border border-gray-300 px-2 py-2 text-center text-sm">HSN/SAC</th>
-                    <th className="border border-gray-300 px-2 py-2 text-right text-sm">Taxable amount</th>
-                    <th className="border border-gray-300 px-2 py-2 text-center text-sm">CGST</th>
-                    <th className="border border-gray-300 px-2 py-2 text-center text-sm">SGST</th>
-                    <th className="border border-gray-300 px-2 py-2 text-right text-sm">Total Tax Amount</th>
+                    <th className="border border-gray-300 px-1 md:px-2 py-1 md:py-2 text-center text-xs md:text-sm">HSN/SAC</th>
+                    <th className="border border-gray-300 px-1 md:px-2 py-1 md:py-2 text-right text-xs md:text-sm">Taxable amount</th>
+                    <th className="border border-gray-300 px-1 md:px-2 py-1 md:py-2 text-center text-xs md:text-sm">CGST</th>
+                    <th className="border border-gray-300 px-1 md:px-2 py-1 md:py-2 text-center text-xs md:text-sm">SGST</th>
+                    <th className="border border-gray-300 px-1 md:px-2 py-1 md:py-2 text-right text-xs md:text-sm">Total Tax Amount</th>
                   </tr>
                   <tr className="bg-gray-50">
-                    <th className="border border-gray-300 px-2 py-1 text-center text-xs"></th>
-                    <th className="border border-gray-300 px-2 py-1 text-center text-xs"></th>
-                    <th className="border border-gray-300 px-2 py-1 text-center text-xs">
+                    <th className="border border-gray-300 px-1 md:px-2 py-1 text-center text-xs"></th>
+                    <th className="border border-gray-300 px-1 md:px-2 py-1 text-center text-xs"></th>
+                    <th className="border border-gray-300 px-1 md:px-2 py-1 text-center text-xs">
                       <div className="flex justify-around">
                         <span>Rate</span>
                         <span>Amount</span>
                       </div>
                     </th>
-                    <th className="border border-gray-300 px-2 py-1 text-center text-xs">
+                    <th className="border border-gray-300 px-1 md:px-2 py-1 text-center text-xs">
                       <div className="flex justify-around">
                         <span>Rate</span>
                         <span>Amount</span>
                       </div>
                     </th>
-                    <th className="border border-gray-300 px-2 py-1 text-center text-xs"></th>
+                    <th className="border border-gray-300 px-1 md:px-2 py-1 text-center text-xs"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {getHsnTaxBreakdown().map((hsnData, index) => (
                     <tr key={index}>
-                      <td className="border border-gray-300 px-2 py-2 text-center text-sm">{hsnData.hsn}</td>
-                      <td className="border border-gray-300 px-2 py-2 text-right text-sm">₹{hsnData.taxableAmount.toFixed(2)}</td>
-                      <td className="border border-gray-300 px-2 py-2 text-center text-sm">
+                      <td className="border border-gray-300 px-1 md:px-2 py-1 md:py-2 text-center text-xs md:text-sm">{hsnData.hsn}</td>
+                      <td className="border border-gray-300 px-1 md:px-2 py-1 md:py-2 text-right text-xs md:text-sm">₹{hsnData.taxableAmount.toFixed(2)}</td>
+                      <td className="border border-gray-300 px-1 md:px-2 py-1 md:py-2 text-center text-xs md:text-sm">
                         <div className="flex justify-around">
                           <span>{(hsnData.gstRate / 2).toFixed(1)}%</span>
                           <span>₹{hsnData.cgstAmount.toFixed(2)}</span>
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-2 text-center text-sm">
+                      <td className="border border-gray-300 px-1 md:px-2 py-1 md:py-2 text-center text-xs md:text-sm">
                         <div className="flex justify-around">
                           <span>{(hsnData.gstRate / 2).toFixed(1)}%</span>
                           <span>₹{hsnData.sgstAmount.toFixed(2)}</span>
                         </div>
                       </td>
-                      <td className="border border-gray-300 px-2 py-2 text-right text-sm">₹{hsnData.totalTax.toFixed(2)}</td>
+                      <td className="border border-gray-300 px-1 md:px-2 py-1 md:py-2 text-right text-xs md:text-sm">₹{hsnData.totalTax.toFixed(2)}</td>
                     </tr>
                   ))}
                   <tr className="font-semibold bg-gray-50">
-                    <td className="border border-gray-300 px-2 py-2 text-center text-sm">Total</td>
-                    <td className="border border-gray-300 px-2 py-2 text-right text-sm">
+                    <td className="border border-gray-300 px-1 md:px-2 py-1 md:py-2 text-center text-xs md:text-sm">Total</td>
+                    <td className="border border-gray-300 px-1 md:px-2 py-1 md:py-2 text-right text-xs md:text-sm">
                       ₹{getHsnTaxBreakdown().reduce((sum, item) => sum + item.taxableAmount, 0).toFixed(2)}
                     </td>
-                    <td className="border border-gray-300 px-2 py-2 text-right text-sm">
+                    <td className="border border-gray-300 px-1 md:px-2 py-1 md:py-2 text-right text-xs md:text-sm">
                       ₹{getHsnTaxBreakdown().reduce((sum, item) => sum + item.cgstAmount, 0).toFixed(2)}
                     </td>
-                    <td className="border border-gray-300 px-2 py-2 text-right text-sm">
+                    <td className="border border-gray-300 px-1 md:px-2 py-1 md:py-2 text-right text-xs md:text-sm">
                       ₹{getHsnTaxBreakdown().reduce((sum, item) => sum + item.sgstAmount, 0).toFixed(2)}
                     </td>
-                    <td className="border border-gray-300 px-2 py-2 text-right text-sm">
+                    <td className="border border-gray-300 px-1 md:px-2 py-1 md:py-2 text-right text-xs md:text-sm">
                       ₹{getHsnTaxBreakdown().reduce((sum, item) => sum + item.totalTax, 0).toFixed(2)}
                     </td>
                   </tr>
@@ -702,21 +703,21 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
             </div>
 
             {/* Footer Section */}
-            <div className="grid grid-cols-2 gap-8 mt-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mt-6 md:mt-8">
               <div>
-                <div className="border border-gray-300 p-4">
-                  <h4 className="font-semibold mb-2">Bank Details</h4>
-                  <div className="flex">
-                    <div className="w-16 h-16 bg-gray-200 mr-4 flex items-center justify-center text-xs">
+                <div className="border border-gray-300 p-3 md:p-4">
+                  <h4 className="font-semibold mb-2 text-sm md:text-base">Bank Details</h4>
+                  <div className="flex flex-col md:flex-row">
+                    <div className="w-12 h-12 md:w-16 md:h-16 bg-gray-200 mb-2 md:mb-0 md:mr-4 flex items-center justify-center text-xs">
                       QR Code
                     </div>
-                    <div className="text-sm">
+                    <div className="text-xs md:text-sm">
                       {invoiceData.bank_account ? (
                         <>
                           <p><span className="font-medium">Name:</span> {invoiceData.bank_account.bank_name}</p>
                           <p><span className="font-medium">Account No.:</span> {invoiceData.bank_account.account_number}</p>
                           <p><span className="font-medium">IFSC code:</span> {invoiceData.bank_account.ifsc_code}</p>
-                          <p><span className="font-medium">Account Holder's Name:</span> {invoiceData.bank_account.account_holder_name}</p>
+                          <p><span className="font-medium">Account Holder{"'"}s Name:</span> {invoiceData.bank_account.account_holder_name}</p>
                         </>
                       ) : (
                         <>
@@ -724,7 +725,7 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
                           <p><span className="font-medium">Branch:</span> KUNDARA</p>
                           <p><span className="font-medium">Account No.:</span> 284511100001097</p>
                           <p><span className="font-medium">IFSC code:</span> UBIN0528459</p>
-                          <p><span className="font-medium">Account Holder's Name:</span> JEEVUS NATURALS</p>
+                          <p><span className="font-medium">Account Holder{"'"}s Name:</span> JEEVUS NATURALS</p>
                         </>
                       )}
                     </div>
@@ -733,16 +734,16 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
               </div>
               
               <div>
-                <div className="border border-gray-300 p-4 h-full">
+                <div className="border border-gray-300 p-3 md:p-4 h-full">
                   <div className="mb-4">
-                    <h4 className="font-semibold mb-2">Terms and conditions</h4>
-                    <p className="text-sm">Thanks for doing business with us!</p>
+                    <h4 className="font-semibold mb-2 text-sm md:text-base">Terms and conditions</h4>
+                    <p className="text-xs md:text-sm">Thanks for doing business with us!</p>
                   </div>
                   
-                  <div className="mt-8 text-right">
-                    <p className="text-sm font-medium">For Jeevus Naturals</p>
-                    <div className="mt-8 border-t border-gray-300 pt-2">
-                      <p className="text-sm">Authorized Signatory</p>
+                  <div className="mt-6 md:mt-8 text-right">
+                    <p className="text-xs md:text-sm font-medium">For Jeevus Naturals</p>
+                    <div className="mt-6 md:mt-8 border-t border-gray-300 pt-2">
+                      <p className="text-xs md:text-sm">Authorized Signatory</p>
                     </div>
                   </div>
                 </div>
@@ -751,9 +752,9 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
 
             {/* Notes */}
             {invoiceData.notes && (
-              <div className="mt-8">
-                <h3 className="text-lg font-semibold mb-3">Notes:</h3>
-                <p className="text-gray-700">{invoiceData.notes}</p>
+              <div className="mt-6 md:mt-8">
+                <h3 className="text-base md:text-lg font-semibold mb-3">Notes:</h3>
+                <p className="text-gray-700 text-sm md:text-base">{invoiceData.notes}</p>
               </div>
             )}
           </div>
