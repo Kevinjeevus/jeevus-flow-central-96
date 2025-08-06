@@ -18,6 +18,8 @@ interface OrderItem {
   productName: string;
   quantity: number;
   unitPrice: number;
+  gstRate: number;
+  taxAmount: number;
   total: number;
 }
 
@@ -38,6 +40,7 @@ interface Product {
   sku: string;
   unit: string;
   status: string;
+  gst_rate: number;
 }
 
 interface SaleOrderFormProps {
@@ -59,12 +62,11 @@ export function SaleOrderForm({ onClose, onSuccess }: SaleOrderFormProps) {
     order_date: new Date().toISOString().split('T')[0],
     delivery_date: "",
     notes: "",
-    tax_rate: 18,
     status: 'pending'
   });
 
   const [items, setItems] = useState<OrderItem[]>([
-    { id: "1", product_id: "", productName: "", quantity: 1, unitPrice: 0, total: 0 }
+    { id: "1", product_id: "", productName: "", quantity: 1, unitPrice: 0, gstRate: 0, taxAmount: 0, total: 0 }
   ]);
 
   useEffect(() => {
@@ -91,7 +93,7 @@ export function SaleOrderForm({ onClose, onSuccess }: SaleOrderFormProps) {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('*')
+        .select('id, name, sale_price, sku, unit, status, gst_rate')
         .eq('status', 'active')
         .order('name');
 
@@ -109,6 +111,8 @@ export function SaleOrderForm({ onClose, onSuccess }: SaleOrderFormProps) {
       productName: "",
       quantity: 1,
       unitPrice: 0,
+      gstRate: 0,
+      taxAmount: 0,
       total: 0
     };
     setItems([...items, newItem]);
@@ -123,27 +127,35 @@ export function SaleOrderForm({ onClose, onSuccess }: SaleOrderFormProps) {
       if (item.id === id) {
         const updatedItem = { ...item, [field]: value };
         
-        // If product is selected, update name and price
+        // If product is selected, update name, price, and GST rate
         if (field === 'product_id' && value) {
           const product = products.find(p => p.id === value);
           if (product) {
             updatedItem.productName = product.name;
             updatedItem.unitPrice = product.sale_price;
-            updatedItem.total = updatedItem.quantity * product.sale_price;
+            updatedItem.gstRate = product.gst_rate || 0;
+            
+            // Calculate amounts
+            const subtotal = updatedItem.quantity * product.sale_price;
+            updatedItem.taxAmount = (subtotal * updatedItem.gstRate) / 100;
+            updatedItem.total = subtotal + updatedItem.taxAmount;
           }
         }
         
         if (field === 'quantity' || field === 'unitPrice') {
-          updatedItem.total = updatedItem.quantity * updatedItem.unitPrice;
+          const subtotal = updatedItem.quantity * updatedItem.unitPrice;
+          updatedItem.taxAmount = (subtotal * updatedItem.gstRate) / 100;
+          updatedItem.total = subtotal + updatedItem.taxAmount;
         }
+        
         return updatedItem;
       }
       return item;
     }));
   };
 
-  const subtotal = items.reduce((sum, item) => sum + item.total, 0);
-  const taxAmount = (subtotal * orderData.tax_rate) / 100;
+  const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+  const taxAmount = items.reduce((sum, item) => sum + item.taxAmount, 0);
   const total = subtotal + taxAmount;
 
   const filteredCustomers = customers.filter(customer =>
@@ -371,7 +383,7 @@ export function SaleOrderForm({ onClose, onSuccess }: SaleOrderFormProps) {
           <div className="space-y-4">
             {items.map((item, index) => (
               <div key={item.id} className="grid grid-cols-12 gap-4 items-end">
-                <div className="col-span-5">
+                <div className="col-span-4">
                   <Label>Product</Label>
                   <Select
                     value={item.product_id}
@@ -383,7 +395,7 @@ export function SaleOrderForm({ onClose, onSuccess }: SaleOrderFormProps) {
                     <SelectContent>
                       {products.map((product) => (
                         <SelectItem key={product.id} value={product.id}>
-                          {product.name} - ₹{product.sale_price}
+                          {product.name} - ₹{product.sale_price} ({product.gst_rate}% GST)
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -407,7 +419,15 @@ export function SaleOrderForm({ onClose, onSuccess }: SaleOrderFormProps) {
                     step="0.01"
                   />
                 </div>
-                <div className="col-span-2">
+                <div className="col-span-1">
+                  <Label>GST%</Label>
+                  <Input
+                    value={`${item.gstRate}%`}
+                    disabled
+                    className="text-center"
+                  />
+                </div>
+                <div className="col-span-1">
                   <Label>Total</Label>
                   <Input
                     value={`₹${item.total.toFixed(2)}`}
@@ -459,7 +479,7 @@ export function SaleOrderForm({ onClose, onSuccess }: SaleOrderFormProps) {
               <span>₹{subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
-              <span>Tax ({orderData.tax_rate}%):</span>
+              <span>Total Tax:</span>
               <span>₹{taxAmount.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-lg font-bold border-t pt-2">
