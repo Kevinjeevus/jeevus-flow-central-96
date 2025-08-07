@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SaleOrderForm } from "@/components/SaleOrderForm";
-import { ErpLayout } from "@/components/ErpLayout";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -221,143 +221,141 @@ export default function SaleOrder() {
   }
 
   return (
-    <ErpLayout>
-      <div className="p-4 md:p-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Sale Order</h1>
-            <p className="text-muted-foreground">Manage customer orders and sales</p>
-          </div>
-          <Button 
-            className="bg-gradient-primary hover:bg-gradient-primary/90 w-full md:w-auto"
-            onClick={() => setShowOrderForm(true)}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Create Order
-          </Button>
+    <div className="p-4 md:p-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Sale Order</h1>
+          <p className="text-muted-foreground">Manage customer orders and sales</p>
         </div>
-
-        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 mb-6">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input 
-              placeholder="Search orders..." 
-              className="pl-10"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <Button variant="outline" className="w-full md:w-auto">
-            <Filter className="h-4 w-4 mr-2" />
-            Filter
-          </Button>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ShoppingCart className="h-5 w-5" />
-              Sales Orders
-            </CardTitle>
-            <CardDescription>
-              Track and process customer orders efficiently
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                <p className="mt-4 text-muted-foreground">Loading orders...</p>
-              </div>
-            ) : filteredOrders.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No sale orders found</p>
-                <p className="text-sm">Create your first sale order to get started</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-[120px]">Order Number</TableHead>
-                      <TableHead className="min-w-[150px]">Customer</TableHead>
-                      <TableHead className="min-w-[100px]">Order Date</TableHead>
-                      <TableHead className="min-w-[100px]">Delivery Date</TableHead>
-                      <TableHead className="min-w-[100px]">Amount</TableHead>
-                      <TableHead className="min-w-[80px]">Status</TableHead>
-                      <TableHead className="w-[50px]"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredOrders.map((order) => (
-                      <TableRow key={order.id}>
-                        <TableCell className="font-medium">{order.order_number}</TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{order.customer.name}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {order.customer.email || order.customer.phone}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>{new Date(order.order_date).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          {order.delivery_date ? new Date(order.delivery_date).toLocaleDateString() : '-'}
-                        </TableCell>
-                        <TableCell>₹{order.total_amount.toFixed(2)}</TableCell>
-                        <TableCell>
-                          <Badge className={getStatusColor(order.status)}>
-                            {order.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
-                                <Eye className="h-4 w-4 mr-2" />
-                                View Details
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleEdit(order)}
-                              >
-                                <FileText className="h-4 w-4 mr-2" />
-                                Edit Order
-                              </DropdownMenuItem>
-                              {order.status !== 'converted' && (
-                                <DropdownMenuItem
-                                  onClick={() => convertToInvoice(order.id)}
-                                  disabled={convertingOrderId === order.id}
-                                >
-                                  <FileText className="h-4 w-4 mr-2" />
-                                  Convert to Invoice
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuItem
-                                onClick={() => handleDelete(order.id)}
-                                disabled={deletingOrderId === order.id}
-                                className="text-destructive"
-                              >
-                                <FileText className="h-4 w-4 mr-2" />
-                                Delete Order
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <Button 
+          className="bg-gradient-primary hover:bg-gradient-primary/90 w-full md:w-auto"
+          onClick={() => setShowOrderForm(true)}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Create Order
+        </Button>
       </div>
-    </ErpLayout>
+
+      <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 mb-6">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input 
+            placeholder="Search orders..." 
+            className="pl-10"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <Button variant="outline" className="w-full md:w-auto">
+          <Filter className="h-4 w-4 mr-2" />
+          Filter
+        </Button>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ShoppingCart className="h-5 w-5" />
+            Sales Orders
+          </CardTitle>
+          <CardDescription>
+            Track and process customer orders efficiently
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              <p className="mt-4 text-muted-foreground">Loading orders...</p>
+            </div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No sale orders found</p>
+              <p className="text-sm">Create your first sale order to get started</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[120px]">Order Number</TableHead>
+                    <TableHead className="min-w-[150px]">Customer</TableHead>
+                    <TableHead className="min-w-[100px]">Order Date</TableHead>
+                    <TableHead className="min-w-[100px]">Delivery Date</TableHead>
+                    <TableHead className="min-w-[100px]">Amount</TableHead>
+                    <TableHead className="min-w-[80px]">Status</TableHead>
+                    <TableHead className="w-[50px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredOrders.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-medium">{order.order_number}</TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{order.customer.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {order.customer.email || order.customer.phone}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{new Date(order.order_date).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        {order.delivery_date ? new Date(order.delivery_date).toLocaleDateString() : '-'}
+                      </TableCell>
+                      <TableCell>₹{order.total_amount.toFixed(2)}</TableCell>
+                      <TableCell>
+                        <Badge className={getStatusColor(order.status)}>
+                          {order.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleEdit(order)}
+                            >
+                              <FileText className="h-4 w-4 mr-2" />
+                              Edit Order
+                            </DropdownMenuItem>
+                            {order.status !== 'converted' && (
+                              <DropdownMenuItem
+                                onClick={() => convertToInvoice(order.id)}
+                                disabled={convertingOrderId === order.id}
+                              >
+                                <FileText className="h-4 w-4 mr-2" />
+                                Convert to Invoice
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem
+                              onClick={() => handleDelete(order.id)}
+                              disabled={deletingOrderId === order.id}
+                              className="text-destructive"
+                            >
+                              <FileText className="h-4 w-4 mr-2" />
+                              Delete Order
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
