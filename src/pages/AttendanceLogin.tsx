@@ -167,7 +167,7 @@ export default function AttendanceLogin() {
 
       // Refresh active session
       await checkActiveSession();
-      navigate('/salesman-dashboard');
+      navigate('/employee-dashboard');
     } catch (error: any) {
       toast({
         title: "Error",
@@ -238,7 +238,7 @@ export default function AttendanceLogin() {
             
             <div className="space-y-3">
               <Button 
-                onClick={() => navigate('/salesman-dashboard')} 
+                onClick={() => navigate('/employee-dashboard')} 
                 className="w-full bg-gradient-primary hover:bg-gradient-primary/90"
               >
                 Go to Dashboard

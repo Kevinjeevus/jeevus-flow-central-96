@@ -28,6 +28,8 @@ import EmployeeAuth from "./pages/EmployeeAuth";
 import AttendanceLogin from "./pages/AttendanceLogin";
 import Expenses from "./pages/Expenses";
 import SalesmanDashboard from "./pages/SalesmanDashboard";
+import EmployeeDashboard from "./pages/EmployeeDashboard";
+import AttendanceHistory from "./pages/AttendanceHistory";
 import Employees from "./pages/Employees";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -60,8 +62,10 @@ function ProtectedRoutes() {
 
   return (
     <Routes>
-      {/* Salesman Dashboard Routes - No ErpLayout */}
+      {/* Employee Dashboard Routes - No ErpLayout */}
       <Route path="salesman-dashboard" element={<SalesmanDashboard />} />
+      <Route path="employee-dashboard" element={<EmployeeDashboard />} />
+      <Route path="attendance-history" element={<AttendanceHistory />} />
       <Route path="sale-invoices" element={<SaleInvoices />} />
       
       {/* Regular ERP Routes with Layout */}
