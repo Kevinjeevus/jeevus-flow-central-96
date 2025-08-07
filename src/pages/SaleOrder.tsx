@@ -35,6 +35,8 @@ export default function SaleOrder() {
   const [convertingOrderId, setConvertingOrderId] = useState<string | null>(null);
   const [editingOrder, setEditingOrder] = useState<SaleOrder | null>(null);
   const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
+  const [viewingOrder, setViewingOrder] = useState<any | null>(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
   useEffect(() => {
     fetchOrders();
@@ -154,6 +156,37 @@ export default function SaleOrder() {
   const handleEdit = (order: SaleOrder) => {
     setEditingOrder(order);
     setShowOrderForm(true);
+  };
+
+  const handleViewDetails = async (orderId: string) => {
+    try {
+      setLoadingDetails(true);
+      
+      const { data: orderData, error } = await supabase
+        .from('sales_orders')
+        .select(`
+          *,
+          customer:customers(name, email, phone, company, address, city, state, pincode),
+          sales_order_items(
+            *,
+            product:products(name, sku, unit)
+          )
+        `)
+        .eq('id', orderId)
+        .single();
+
+      if (error) throw error;
+      setViewingOrder(orderData);
+    } catch (error) {
+      console.error('Error fetching order details:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load order details",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingDetails(false);
+    }
   };
 
   const handleDelete = async (orderId: string) => {
@@ -303,7 +336,7 @@ export default function SaleOrder() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48">
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleViewDetails(order.id)}>
                                 <Eye className="h-4 w-4 mr-2" />
                                 View Details
                               </DropdownMenuItem>
@@ -404,7 +437,7 @@ export default function SaleOrder() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleViewDetails(order.id)}>
                                 <Eye className="h-4 w-4 mr-2" />
                                 View Details
                               </DropdownMenuItem>
@@ -441,6 +474,164 @@ export default function SaleOrder() {
           )}
         </CardContent>
       </Card>
+
+      {/* Order Details Dialog */}
+      <Dialog open={!!viewingOrder} onOpenChange={() => setViewingOrder(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Order Details - {viewingOrder?.order_number}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {loadingDetails ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              <p className="mt-4 text-muted-foreground">Loading order details...</p>
+            </div>
+          ) : viewingOrder && (
+            <div className="space-y-6">
+              {/* Order Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg">Order Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Order Number:</span>
+                      <span className="font-medium">{viewingOrder.order_number}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Order Date:</span>
+                      <span className="font-medium">{new Date(viewingOrder.order_date).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Delivery Date:</span>
+                      <span className="font-medium">
+                        {viewingOrder.delivery_date ? new Date(viewingOrder.delivery_date).toLocaleDateString() : 'Not specified'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Status:</span>
+                      <Badge className={getStatusColor(viewingOrder.status)}>{viewingOrder.status}</Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Customer Information */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg">Customer Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Name:</span>
+                      <span className="font-medium">{viewingOrder.customer?.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Company:</span>
+                      <span className="font-medium">{viewingOrder.customer?.company || '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Email:</span>
+                      <span className="font-medium">{viewingOrder.customer?.email || '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Phone:</span>
+                      <span className="font-medium">{viewingOrder.customer?.phone || '-'}</span>
+                    </div>
+                    {viewingOrder.customer?.address && (
+                      <div className="flex flex-col">
+                        <span className="text-muted-foreground">Address:</span>
+                        <span className="font-medium text-sm mt-1">
+                          {viewingOrder.customer.address}
+                          {viewingOrder.customer.city && `, ${viewingOrder.customer.city}`}
+                          {viewingOrder.customer.state && `, ${viewingOrder.customer.state}`}
+                          {viewingOrder.customer.pincode && ` - ${viewingOrder.customer.pincode}`}
+                        </span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Order Items */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">Order Items</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Product</TableHead>
+                          <TableHead>SKU</TableHead>
+                          <TableHead className="text-right">Quantity</TableHead>
+                          <TableHead className="text-right">Unit Price</TableHead>
+                          <TableHead className="text-right">Total</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {viewingOrder.sales_order_items?.map((item: any) => (
+                          <TableRow key={item.id}>
+                            <TableCell className="font-medium">
+                              {item.product?.name || 'Unknown Product'}
+                            </TableCell>
+                            <TableCell>{item.product?.sku || '-'}</TableCell>
+                            <TableCell className="text-right">
+                              {item.quantity} {item.product?.unit || 'pcs'}
+                            </TableCell>
+                            <TableCell className="text-right">₹{item.unit_price?.toFixed(2)}</TableCell>
+                            <TableCell className="text-right font-medium">₹{item.total_price?.toFixed(2)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Order Summary */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">Order Summary</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Subtotal:</span>
+                      <span className="font-medium">₹{viewingOrder.subtotal?.toFixed(2) || '0.00'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Tax Amount:</span>
+                      <span className="font-medium">₹{viewingOrder.tax_amount?.toFixed(2) || '0.00'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Discount:</span>
+                      <span className="font-medium">₹{viewingOrder.discount_amount?.toFixed(2) || '0.00'}</span>
+                    </div>
+                    <div className="border-t pt-2">
+                      <div className="flex justify-between text-lg font-bold">
+                        <span>Total Amount:</span>
+                        <span>₹{viewingOrder.total_amount?.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  {viewingOrder.notes && (
+                    <div className="mt-4 pt-4 border-t">
+                      <span className="text-muted-foreground block mb-2">Notes:</span>
+                      <p className="text-sm">{viewingOrder.notes}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
