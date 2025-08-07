@@ -221,138 +221,223 @@ export default function SaleOrder() {
   }
 
   return (
-    <div className="p-4 md:p-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Sale Order</h1>
-          <p className="text-muted-foreground">Manage customer orders and sales</p>
+    <div className="p-3 sm:p-4 md:p-6 max-w-full">
+      {/* Header Section */}
+      <div className="flex flex-col space-y-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">Sale Order</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">Manage customer orders and sales</p>
+          </div>
+          <Button 
+            className="bg-gradient-primary hover:bg-gradient-primary/90 w-full sm:w-auto shrink-0"
+            onClick={() => setShowOrderForm(true)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            <span className="hidden xs:inline">Create Order</span>
+            <span className="xs:hidden">Create</span>
+          </Button>
         </div>
-        <Button 
-          className="bg-gradient-primary hover:bg-gradient-primary/90 w-full md:w-auto"
-          onClick={() => setShowOrderForm(true)}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Create Order
-        </Button>
+
+        {/* Search and Filter Section */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input 
+              placeholder="Search orders..." 
+              className="pl-10 w-full"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <Button variant="outline" className="w-full sm:w-auto shrink-0">
+            <Filter className="h-4 w-4 mr-2" />
+            Filter
+          </Button>
+        </div>
       </div>
 
-      <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 mb-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input 
-            placeholder="Search orders..." 
-            className="pl-10"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <Button variant="outline" className="w-full md:w-auto">
-          <Filter className="h-4 w-4 mr-2" />
-          Filter
-        </Button>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+      {/* Orders Card */}
+      <Card className="w-full">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-lg">
             <ShoppingCart className="h-5 w-5" />
             Sales Orders
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-sm">
             Track and process customer orders efficiently
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 sm:p-6">
           {isLoading ? (
-            <div className="text-center py-8">
+            <div className="text-center py-8 px-4">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
               <p className="mt-4 text-muted-foreground">Loading orders...</p>
             </div>
           ) : filteredOrders.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-8 px-4 text-muted-foreground">
               <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No sale orders found</p>
-              <p className="text-sm">Create your first sale order to get started</p>
+              <p className="text-base">No sale orders found</p>
+              <p className="text-sm mt-1">Create your first sale order to get started</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="min-w-[120px]">Order Number</TableHead>
-                    <TableHead className="min-w-[150px]">Customer</TableHead>
-                    <TableHead className="min-w-[100px]">Order Date</TableHead>
-                    <TableHead className="min-w-[100px]">Delivery Date</TableHead>
-                    <TableHead className="min-w-[100px]">Amount</TableHead>
-                    <TableHead className="min-w-[80px]">Status</TableHead>
-                    <TableHead className="w-[50px]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredOrders.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-medium">{order.order_number}</TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{order.customer.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {order.customer.email || order.customer.phone}
-                          </div>
+            <>
+              {/* Mobile Card View */}
+              <div className="block md:hidden space-y-3 p-4">
+                {filteredOrders.map((order) => (
+                  <Card key={order.id} className="border border-border">
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-sm truncate">{order.order_number}</h3>
+                          <p className="text-sm text-muted-foreground mt-1 truncate">{order.customer.name}</p>
                         </div>
-                      </TableCell>
-                      <TableCell>{new Date(order.order_date).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        {order.delivery_date ? new Date(order.delivery_date).toLocaleDateString() : '-'}
-                      </TableCell>
-                      <TableCell>₹{order.total_amount.toFixed(2)}</TableCell>
-                      <TableCell>
-                        <Badge className={getStatusColor(order.status)}>
-                          {order.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
-                              <Eye className="h-4 w-4 mr-2" />
-                              View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleEdit(order)}
-                            >
-                              <FileText className="h-4 w-4 mr-2" />
-                              Edit Order
-                            </DropdownMenuItem>
-                            {order.status !== 'converted' && (
+                        <div className="flex items-center gap-2 ml-2">
+                          <Badge className={`${getStatusColor(order.status)} text-xs px-2 py-1`}>
+                            {order.status}
+                          </Badge>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem>
+                                <Eye className="h-4 w-4 mr-2" />
+                                View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleEdit(order)}>
+                                <FileText className="h-4 w-4 mr-2" />
+                                Edit Order
+                              </DropdownMenuItem>
+                              {order.status !== 'converted' && (
+                                <DropdownMenuItem
+                                  onClick={() => convertToInvoice(order.id)}
+                                  disabled={convertingOrderId === order.id}
+                                >
+                                  <FileText className="h-4 w-4 mr-2" />
+                                  Convert to Invoice
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem
-                                onClick={() => convertToInvoice(order.id)}
-                                disabled={convertingOrderId === order.id}
+                                onClick={() => handleDelete(order.id)}
+                                disabled={deletingOrderId === order.id}
+                                className="text-destructive"
                               >
                                 <FileText className="h-4 w-4 mr-2" />
-                                Convert to Invoice
+                                Delete Order
                               </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem
-                              onClick={() => handleDelete(order.id)}
-                              disabled={deletingOrderId === order.id}
-                              className="text-destructive"
-                            >
-                              <FileText className="h-4 w-4 mr-2" />
-                              Delete Order
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <span className="text-muted-foreground block">Order Date</span>
+                          <span className="font-medium">{new Date(order.order_date).toLocaleDateString()}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground block">Amount</span>
+                          <span className="font-medium">₹{order.total_amount.toFixed(2)}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground block">Delivery Date</span>
+                          <span className="font-medium">
+                            {order.delivery_date ? new Date(order.delivery_date).toLocaleDateString() : '-'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground block">Contact</span>
+                          <span className="font-medium text-xs truncate">
+                            {order.customer.email || order.customer.phone || '-'}
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[120px]">Order Number</TableHead>
+                      <TableHead className="min-w-[150px]">Customer</TableHead>
+                      <TableHead className="min-w-[100px]">Order Date</TableHead>
+                      <TableHead className="min-w-[100px]">Delivery Date</TableHead>
+                      <TableHead className="min-w-[100px]">Amount</TableHead>
+                      <TableHead className="min-w-[80px]">Status</TableHead>
+                      <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredOrders.map((order) => (
+                      <TableRow key={order.id}>
+                        <TableCell className="font-medium">{order.order_number}</TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{order.customer.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {order.customer.email || order.customer.phone}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{new Date(order.order_date).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          {order.delivery_date ? new Date(order.delivery_date).toLocaleDateString() : '-'}
+                        </TableCell>
+                        <TableCell>₹{order.total_amount.toFixed(2)}</TableCell>
+                        <TableCell>
+                          <Badge className={getStatusColor(order.status)}>
+                            {order.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>
+                                <Eye className="h-4 w-4 mr-2" />
+                                View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleEdit(order)}>
+                                <FileText className="h-4 w-4 mr-2" />
+                                Edit Order
+                              </DropdownMenuItem>
+                              {order.status !== 'converted' && (
+                                <DropdownMenuItem
+                                  onClick={() => convertToInvoice(order.id)}
+                                  disabled={convertingOrderId === order.id}
+                                >
+                                  <FileText className="h-4 w-4 mr-2" />
+                                  Convert to Invoice
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem
+                                onClick={() => handleDelete(order.id)}
+                                disabled={deletingOrderId === order.id}
+                                className="text-destructive"
+                              >
+                                <FileText className="h-4 w-4 mr-2" />
+                                Delete Order
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
