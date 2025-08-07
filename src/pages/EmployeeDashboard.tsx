@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Clock, ShoppingCart, FileText, Calendar, MapPin, TrendingUp, Users, Package } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Clock, ShoppingCart, FileText, Calendar, MapPin, TrendingUp, Users, Package, Plus, DollarSign } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useToast } from '@/hooks/use-toast';
+import { ExpenseForm } from '@/components/ExpenseForm';
 
 interface DashboardStats {
   todaySales: number;
@@ -22,6 +25,15 @@ interface AttendanceInfo {
   sessionId: string;
 }
 
+interface TodaySalesOrder {
+  id: string;
+  order_number: string;
+  customer_name: string;
+  total_amount: number;
+  status: string;
+  order_date: string;
+}
+
 export default function EmployeeDashboard() {
   const { user, loading } = useAuth();
   const { toast } = useToast();
@@ -35,11 +47,14 @@ export default function EmployeeDashboard() {
   });
   const [attendanceInfo, setAttendanceInfo] = useState<AttendanceInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showExpenseForm, setShowExpenseForm] = useState(false);
+  const [todayOrders, setTodayOrders] = useState<TodaySalesOrder[]>([]);
 
   useEffect(() => {
     if (user) {
       fetchDashboardData();
       fetchAttendanceInfo();
+      fetchTodayOrders();
     }
   }, [user]);
 
@@ -121,6 +136,45 @@ export default function EmployeeDashboard() {
     } catch (error) {
       console.error('Error fetching attendance info:', error);
     }
+  };
+
+  const fetchTodayOrders = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const { data, error } = await supabase
+        .from('sales_orders')
+        .select(`
+          id,
+          order_number,
+          total_amount,
+          status,
+          order_date,
+          customers(name)
+        `)
+        .gte('order_date', today)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+
+      const formattedOrders = data?.map(order => ({
+        id: order.id,
+        order_number: order.order_number,
+        customer_name: order.customers?.name || 'Unknown',
+        total_amount: order.total_amount,
+        status: order.status,
+        order_date: order.order_date
+      })) || [];
+
+      setTodayOrders(formattedOrders);
+    } catch (error) {
+      console.error('Error fetching today orders:', error);
+    }
+  };
+
+  const handleExpenseSuccess = () => {
+    setShowExpenseForm(false);
+    fetchDashboardData(); // Refresh stats
   };
 
   const handleLogout = async () => {
@@ -239,7 +293,7 @@ export default function EmployeeDashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/sale-invoices')}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -290,7 +344,74 @@ export default function EmployeeDashboard() {
               </Button>
             </CardContent>
           </Card>
+
+          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setShowExpenseForm(true)}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-primary" />
+                Add Expense
+              </CardTitle>
+              <CardDescription>
+                Record business expenses
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button className="w-full" variant="outline">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Expense
+              </Button>
+            </CardContent>
+          </Card>
         </div>
+
+        {/* Today's Sales Orders */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5" />
+              Today's Sales Orders
+            </CardTitle>
+            <CardDescription>Latest orders placed today</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {todayOrders.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No orders placed today</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Order Number</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {todayOrders.map((order) => (
+                      <TableRow key={order.id}>
+                        <TableCell className="font-medium">{order.order_number}</TableCell>
+                        <TableCell>{order.customer_name}</TableCell>
+                        <TableCell>₹{order.total_amount.toFixed(2)}</TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={order.status === 'confirmed' ? 'default' : 'secondary'}
+                            className="capitalize"
+                          >
+                            {order.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Monthly Overview */}
         <Card>
@@ -319,6 +440,16 @@ export default function EmployeeDashboard() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Expense Form Dialog */}
+        <Dialog open={showExpenseForm} onOpenChange={setShowExpenseForm}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Add New Expense</DialogTitle>
+            </DialogHeader>
+            <ExpenseForm onSuccess={handleExpenseSuccess} />
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

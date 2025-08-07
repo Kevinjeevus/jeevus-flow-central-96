@@ -46,9 +46,10 @@ interface Product {
 interface SaleOrderFormProps {
   onClose: () => void;
   onSuccess?: (orderId: string) => void;
+  editOrder?: any;
 }
 
-export function SaleOrderForm({ onClose, onSuccess }: SaleOrderFormProps) {
+export function SaleOrderForm({ onClose, onSuccess, editOrder }: SaleOrderFormProps) {
   const { toast } = useToast();
   const { orderNumber, isLoading: orderNumberLoading } = useSaleOrderNumber();
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -58,11 +59,11 @@ export function SaleOrderForm({ onClose, onSuccess }: SaleOrderFormProps) {
   const [showNewCustomerForm, setShowNewCustomerForm] = useState(false);
 
   const [orderData, setOrderData] = useState({
-    customer_id: "",
-    order_date: new Date().toISOString().split('T')[0],
-    delivery_date: "",
-    notes: "",
-    status: 'pending'
+    customer_id: editOrder?.customer_id || "",
+    order_date: editOrder?.order_date || new Date().toISOString().split('T')[0],
+    delivery_date: editOrder?.delivery_date || "",
+    notes: editOrder?.notes || "",
+    status: editOrder?.status || 'pending'
   });
 
   const [items, setItems] = useState<OrderItem[]>([
@@ -188,24 +189,55 @@ export function SaleOrderForm({ onClose, onSuccess }: SaleOrderFormProps) {
         return;
       }
 
-      // Insert sale order
-      const { data: orderData_, error: orderError } = await supabase
-        .from('sales_orders')
-        .insert({
-          customer_id: orderData.customer_id,
-          order_number: orderNumber,
-          order_date: orderData.order_date,
-          delivery_date: orderData.delivery_date || null,
-          subtotal,
-          tax_amount: taxAmount,
-          total_amount: total,
-          notes: orderData.notes,
-          status
-        })
-        .select()
-        .single();
+      let orderData_;
+      
+      if (editOrder) {
+        // Update existing order
+        const { data: updatedOrder, error: orderError } = await supabase
+          .from('sales_orders')
+          .update({
+            customer_id: orderData.customer_id,
+            order_date: orderData.order_date,
+            delivery_date: orderData.delivery_date || null,
+            subtotal,
+            tax_amount: taxAmount,
+            total_amount: total,
+            notes: orderData.notes,
+            status
+          })
+          .eq('id', editOrder.id)
+          .select()
+          .single();
 
-      if (orderError) throw orderError;
+        if (orderError) throw orderError;
+        orderData_ = updatedOrder;
+
+        // Delete existing items
+        await supabase
+          .from('sales_order_items')
+          .delete()
+          .eq('sales_order_id', editOrder.id);
+      } else {
+        // Insert new sale order
+        const { data: newOrder, error: orderError } = await supabase
+          .from('sales_orders')
+          .insert({
+            customer_id: orderData.customer_id,
+            order_number: orderNumber,
+            order_date: orderData.order_date,
+            delivery_date: orderData.delivery_date || null,
+            subtotal,
+            tax_amount: taxAmount,
+            total_amount: total,
+            notes: orderData.notes,
+            status
+          })
+          .select()
+          .single();
+
+        if (orderError) throw orderError;
+        orderData_ = newOrder;
+      }
 
       // Insert order items
       const itemsToInsert = validItems.map(item => ({
@@ -223,10 +255,14 @@ export function SaleOrderForm({ onClose, onSuccess }: SaleOrderFormProps) {
       if (itemsError) throw itemsError;
 
       toast({
-        title: status === 'pending' ? "Order Saved" : "Order Confirmed",
-        description: status === 'pending' 
-          ? "Sale order has been saved as draft" 
-          : "Sale order has been confirmed",
+        title: editOrder 
+          ? (status === 'pending' ? "Order Updated" : "Order Confirmed")
+          : (status === 'pending' ? "Order Saved" : "Order Confirmed"),
+        description: editOrder
+          ? "Sale order has been updated successfully"
+          : (status === 'pending' 
+            ? "Sale order has been saved as draft" 
+            : "Sale order has been confirmed"),
       });
 
       onSuccess?.(orderData_.id);
@@ -262,8 +298,12 @@ export function SaleOrderForm({ onClose, onSuccess }: SaleOrderFormProps) {
       <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-xl md:text-2xl font-bold">Create Sale Order</h2>
-            <p className="text-muted-foreground">Create a new customer order</p>
+            <h2 className="text-xl md:text-2xl font-bold">
+              {editOrder ? "Edit Sale Order" : "Create Sale Order"}
+            </h2>
+            <p className="text-muted-foreground">
+              {editOrder ? "Update customer order details" : "Create a new customer order"}
+            </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
             <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">

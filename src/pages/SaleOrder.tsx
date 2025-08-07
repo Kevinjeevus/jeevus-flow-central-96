@@ -33,6 +33,8 @@ export default function SaleOrder() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [convertingOrderId, setConvertingOrderId] = useState<string | null>(null);
+  const [editingOrder, setEditingOrder] = useState<SaleOrder | null>(null);
+  const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchOrders();
@@ -145,7 +147,51 @@ export default function SaleOrder() {
 
   const handleOrderSuccess = () => {
     setShowOrderForm(false);
+    setEditingOrder(null);
     fetchOrders();
+  };
+
+  const handleEdit = (order: SaleOrder) => {
+    setEditingOrder(order);
+    setShowOrderForm(true);
+  };
+
+  const handleDelete = async (orderId: string) => {
+    try {
+      setDeletingOrderId(orderId);
+      
+      // Delete order items first
+      const { error: itemsError } = await supabase
+        .from('sales_order_items')
+        .delete()
+        .eq('sales_order_id', orderId);
+
+      if (itemsError) throw itemsError;
+
+      // Delete the order
+      const { error: orderError } = await supabase
+        .from('sales_orders')
+        .delete()
+        .eq('id', orderId);
+
+      if (orderError) throw orderError;
+
+      toast({
+        title: "Order Deleted",
+        description: "Sale order has been deleted successfully",
+      });
+
+      fetchOrders();
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete order",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingOrderId(null);
+    }
   };
 
   const filteredOrders = orders.filter(order =>
@@ -164,7 +210,14 @@ export default function SaleOrder() {
   };
 
   if (showOrderForm) {
-    return <SaleOrderForm onClose={() => setShowOrderForm(false)} onSuccess={handleOrderSuccess} />;
+    return <SaleOrderForm 
+      onClose={() => {
+        setShowOrderForm(false);
+        setEditingOrder(null);
+      }} 
+      onSuccess={handleOrderSuccess}
+      editOrder={editingOrder}
+    />;
   }
 
   return (
@@ -270,6 +323,12 @@ export default function SaleOrder() {
                                 <Eye className="h-4 w-4 mr-2" />
                                 View Details
                               </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleEdit(order)}
+                              >
+                                <FileText className="h-4 w-4 mr-2" />
+                                Edit Order
+                              </DropdownMenuItem>
                               {order.status !== 'converted' && (
                                 <DropdownMenuItem
                                   onClick={() => convertToInvoice(order.id)}
@@ -279,6 +338,14 @@ export default function SaleOrder() {
                                   Convert to Invoice
                                 </DropdownMenuItem>
                               )}
+                              <DropdownMenuItem
+                                onClick={() => handleDelete(order.id)}
+                                disabled={deletingOrderId === order.id}
+                                className="text-destructive"
+                              >
+                                <FileText className="h-4 w-4 mr-2" />
+                                Delete Order
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
