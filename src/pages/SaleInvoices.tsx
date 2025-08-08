@@ -73,7 +73,6 @@ export default function SaleInvoices() {
 
   useEffect(() => {
     fetchUserProfile();
-    fetchInvoices();
     fetchCustomers();
   }, [user]);
 
@@ -123,10 +122,6 @@ export default function SaleInvoices() {
           ),
           routes (
             name
-          ),
-          employees!employees_user_id_fkey (
-            full_name,
-            employee_id
           )
         `)
         .order("created_at", { ascending: false });
@@ -137,16 +132,35 @@ export default function SaleInvoices() {
       }
 
       const { data, error } = await query;
-
       if (error) throw error;
-      
+
+      // Build employee map by user_id (since there's no FK relationship)
+      let employeeByUserId: Record<string, { full_name: string; employee_id: string }> = {};
+      const userIds = Array.from(new Set((data || []).map((d: any) => d.user_id).filter(Boolean)));
+      if (userIds.length > 0) {
+        const { data: empData, error: empError } = await supabase
+          .from('employees')
+          .select('user_id, full_name, employee_id')
+          .in('user_id', userIds as string[]);
+        if (!empError && empData) {
+          employeeByUserId = Object.fromEntries(
+            empData.map((e: any) => [e.user_id, { full_name: e.full_name, employee_id: e.employee_id }])
+          );
+        }
+      }
+
       // Transform data to match Invoice interface
-      const transformedData = data?.map((invoice: any) => ({
-        ...invoice,
+      const transformedData = (data || []).map((invoice: any) => ({
+        id: invoice.id,
+        invoice_number: invoice.invoice_number,
+        invoice_date: invoice.invoice_date,
+        total_amount: invoice.total_amount,
+        status: invoice.status,
+        user_id: invoice.user_id,
         customer: invoice.customers,
         route: invoice.routes,
-        employee: invoice.employees
-      })) || [];
+        employee: employeeByUserId[invoice.user_id] || undefined,
+      }));
       setInvoices(transformedData);
     } catch (error: any) {
       toast({
