@@ -26,6 +26,14 @@ interface Invoice {
     name: string;
     phone: string;
   };
+  route?: {
+    name: string;
+  };
+  employee?: {
+    full_name: string;
+    employee_id: string;
+  };
+  user_id?: string;
 }
 
 interface Customer {
@@ -53,6 +61,7 @@ export default function SaleInvoices() {
   const [activeTab, setActiveTab] = useState<"invoices" | "customers">("invoices");
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [showInvoicePreview, setShowInvoicePreview] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
@@ -63,9 +72,16 @@ export default function SaleInvoices() {
   }
 
   useEffect(() => {
+    fetchUserProfile();
     fetchInvoices();
     fetchCustomers();
   }, [user]);
+
+  useEffect(() => {
+    if (userProfile !== null) {
+      fetchInvoices();
+    }
+  }, [userProfile]);
 
   useEffect(() => {
     filterInvoices();
@@ -75,9 +91,24 @@ export default function SaleInvoices() {
     filterCustomers();
   }, [customers, customerSearchQuery]);
 
-  const fetchInvoices = async () => {
+  const fetchUserProfile = async () => {
     try {
       const { data, error } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("user_id", user?.id)
+        .single();
+
+      if (error) throw error;
+      setUserProfile(data);
+    } catch (error: any) {
+      console.error("Error fetching user profile:", error);
+    }
+  };
+
+  const fetchInvoices = async () => {
+    try {
+      let query = supabase
         .from("sales_invoices")
         .select(`
           id,
@@ -85,19 +116,36 @@ export default function SaleInvoices() {
           invoice_date,
           total_amount,
           status,
+          user_id,
           customers (
             name,
             phone
+          ),
+          routes (
+            name
+          ),
+          employees!employees_user_id_fkey (
+            full_name,
+            employee_id
           )
         `)
-        .eq("user_id", user?.id)
         .order("created_at", { ascending: false });
 
+      // If not admin, filter by user_id
+      if (userProfile?.role !== 'admin') {
+        query = query.eq("user_id", user?.id);
+      }
+
+      const { data, error } = await query;
+
       if (error) throw error;
+      
       // Transform data to match Invoice interface
       const transformedData = data?.map((invoice: any) => ({
         ...invoice,
-        customer: invoice.customers
+        customer: invoice.customers,
+        route: invoice.routes,
+        employee: invoice.employees
       })) || [];
       setInvoices(transformedData);
     } catch (error: any) {
@@ -417,6 +465,20 @@ export default function SaleInvoices() {
                         <div className="text-sm text-muted-foreground">
                           {new Date(invoice.invoice_date).toLocaleDateString()}
                         </div>
+                        {userProfile?.role === 'admin' && (
+                          <>
+                            {invoice.route && (
+                              <div className="text-xs text-muted-foreground">
+                                Route: {invoice.route.name}
+                              </div>
+                            )}
+                            {invoice.employee && (
+                              <div className="text-xs text-muted-foreground">
+                                Employee: {invoice.employee.full_name} ({invoice.employee.employee_id})
+                              </div>
+                            )}
+                          </>
+                        )}
                       </div>
                       <div className="text-right space-y-1">
                         <div className="font-medium">₹{invoice.total_amount.toLocaleString()}</div>
@@ -604,6 +666,20 @@ export default function SaleInvoices() {
                         <div className="text-sm text-muted-foreground">
                           Date: {new Date(invoice.invoice_date).toLocaleDateString()}
                         </div>
+                        {userProfile?.role === 'admin' && (
+                          <>
+                            {invoice.route && (
+                              <div className="text-xs text-muted-foreground">
+                                Route: {invoice.route.name}
+                              </div>
+                            )}
+                            {invoice.employee && (
+                              <div className="text-xs text-muted-foreground">
+                                Employee: {invoice.employee.full_name} ({invoice.employee.employee_id})
+                              </div>
+                            )}
+                          </>
+                        )}
                          <div className="flex justify-between items-center">
                            <div>{getStatusBadge(invoice.status)}</div>
                            <div className="flex gap-1">
