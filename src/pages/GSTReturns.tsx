@@ -6,6 +6,7 @@ import { Plus, FileText, Calendar, AlertCircle, CheckCircle } from "lucide-react
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GSTReturnsList } from "@/components/finance/GSTReturnsList";
 import { GSTReturnForm } from "@/components/finance/GSTReturnForm";
+import { GenerateGSTReturnDialog } from "@/components/finance/GenerateGSTReturnDialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -13,6 +14,7 @@ export default function GSTReturns() {
   const [showForm, setShowForm] = useState(false);
   const [editingReturn, setEditingReturn] = useState(null);
   const [activeTab, setActiveTab] = useState("gstr1");
+  const [showGenerate, setShowGenerate] = useState(false);
 
   const { data: gstReturns, isLoading } = useQuery({
     queryKey: ["gst-returns"],
@@ -127,13 +129,22 @@ export default function GSTReturns() {
               <TabsTrigger value="gstr9">GSTR-9</TabsTrigger>
             </TabsList>
             
-            <Button 
-              onClick={() => handleNewReturn(activeTab)} 
-              className="bg-gradient-primary hover:bg-gradient-primary/90"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              New {activeTab.toUpperCase()}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button 
+                onClick={() => setShowGenerate(true)}
+                variant="secondary"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Generate {activeTab.toUpperCase()}
+              </Button>
+              <Button 
+                onClick={() => handleNewReturn(activeTab)} 
+                className="bg-gradient-primary hover:bg-gradient-primary/90"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                New {activeTab.toUpperCase()}
+              </Button>
+            </div>
           </div>
 
           <TabsContent value="gstr1" className="mt-6">
@@ -180,6 +191,11 @@ export default function GSTReturns() {
             onClose={handleCloseForm}
           />
         )}
+        <GenerateGSTReturnDialog 
+          open={showGenerate}
+          onOpenChange={setShowGenerate}
+          gstrType={activeTab as any}
+        />
       </div>
     </ErpLayout>
   );
