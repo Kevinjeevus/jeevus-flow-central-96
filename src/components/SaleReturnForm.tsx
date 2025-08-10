@@ -35,6 +35,7 @@ export function SaleReturnForm({ onClose }: SaleReturnFormProps) {
   const [returnData, setReturnData] = useState({
     customerId: "",
     originalInvoice: "",
+    originalBillDate: "",
     returnNumber: "",
     returnDate: new Date().toISOString().split("T")[0],
     returnType: "credit_note",
@@ -89,13 +90,27 @@ export function SaleReturnForm({ onClose }: SaleReturnFormProps) {
       const validItems = items.filter((i) => i.productId && i.quantity > 0);
       if (validItems.length === 0) throw new Error("Add at least one item");
 
+      let originalInvoiceId: string | null = null;
+      if (returnData.originalInvoice) {
+        const { data: inv, error: invErr } = await supabase
+          .from("sales_invoices")
+          .select("id")
+          .eq("invoice_number", returnData.originalInvoice)
+          .eq("customer_id", returnData.customerId)
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (!invErr && inv) {
+          originalInvoiceId = inv.id;
+        }
+      }
+
       const { data: created, error } = await supabase
         .from("sale_returns")
         .insert([
           {
             customer_id: returnData.customerId,
             user_id: user.id,
-            original_invoice_id: null, // could map from invoice number later
+            original_invoice_id: originalInvoiceId,
             return_date: returnData.returnDate,
             subtotal,
             tax_amount: taxAmount,
@@ -188,6 +203,22 @@ export function SaleReturnForm({ onClose }: SaleReturnFormProps) {
             <CardTitle>Return Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div>
+              <Label>Against Invoice Number</Label>
+              <Input
+                value={returnData.originalInvoice}
+                onChange={(e) => setReturnData({ ...returnData, originalInvoice: e.target.value })}
+                placeholder="Enter original invoice number"
+              />
+            </div>
+            <div>
+              <Label>Against Bill Date</Label>
+              <Input
+                type="date"
+                value={returnData.originalBillDate}
+                onChange={(e) => setReturnData({ ...returnData, originalBillDate: e.target.value })}
+              />
+            </div>
             <div>
               <Label>Credit Note Number</Label>
               <Input value={returnData.returnNumber} onChange={(e) => setReturnData({ ...returnData, returnNumber: e.target.value })} placeholder="CN-..." />
