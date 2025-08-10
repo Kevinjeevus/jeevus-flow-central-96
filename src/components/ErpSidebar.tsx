@@ -133,6 +133,7 @@ const menuItems = [
       { title: "HRM", url: "/hrm", icon: UserCog },
       { title: "Employees", url: "/employees", icon: Users },
       { title: "Attendance", url: "/attendance", icon: Clock },
+      { title: "Attendance History", url: "/attendance-history", icon: Clock },
       { title: "Payroll", url: "/payroll", icon: Calculator },
       { title: "Expenses", url: "/expenses", icon: Calculator },
     ],
