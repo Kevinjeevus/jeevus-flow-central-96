@@ -46,6 +46,7 @@ import PurchaseBills from "./pages/PurchaseBills";
 import PaymentOut from "./pages/PaymentOut";
 import PurchaseOrder from "./pages/PurchaseOrder";
 import PurchaseReturn from "./pages/PurchaseReturn";
+import AdminAttendance from "./pages/AdminAttendance";
 
 const queryClient = new QueryClient();
 
@@ -104,6 +105,7 @@ function ProtectedRoutes() {
             <Route path="money/bank-accounts" element={<BankAccounts />} />
             <Route path="money/cash-in-hand" element={<CashInHand />} />
             <Route path="money/cheques" element={<Cheques />} />
+            <Route path="admin-attendance" element={<AdminAttendance />} />
           </Routes>
         </ErpLayout>
       } />
