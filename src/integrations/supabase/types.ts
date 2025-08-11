@@ -848,6 +848,93 @@ export type Database = {
         }
         Relationships: []
       }
+      purchase_bill_items: {
+        Row: {
+          created_at: string
+          gst_rate: number | null
+          id: string
+          product_id: string
+          purchase_bill_id: string
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          gst_rate?: number | null
+          id?: string
+          product_id: string
+          purchase_bill_id: string
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Update: {
+          created_at?: string
+          gst_rate?: number | null
+          id?: string
+          product_id?: string
+          purchase_bill_id?: string
+          quantity?: number
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: []
+      }
+      purchase_bills: {
+        Row: {
+          bill_date: string
+          bill_number: string
+          created_at: string
+          created_by: string | null
+          discount_amount: number
+          due_date: string | null
+          id: string
+          notes: string | null
+          status: string
+          subtotal: number
+          supplier_id: string
+          tax_amount: number
+          total_amount: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bill_date?: string
+          bill_number: string
+          created_at?: string
+          created_by?: string | null
+          discount_amount?: number
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          subtotal?: number
+          supplier_id: string
+          tax_amount?: number
+          total_amount?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bill_date?: string
+          bill_number?: string
+          created_at?: string
+          created_by?: string | null
+          discount_amount?: number
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          subtotal?: number
+          supplier_id?: string
+          tax_amount?: number
+          total_amount?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       purchase_order_items: {
         Row: {
           created_at: string
@@ -1499,6 +1586,7 @@ export type Database = {
           id: string
           payment_in_prefix: string | null
           proforma_invoice_prefix: string | null
+          purchase_bill_prefix: string | null
           purchase_order_prefix: string | null
           sale_order_prefix: string | null
           sale_prefix: string | null
@@ -1515,6 +1603,7 @@ export type Database = {
           id?: string
           payment_in_prefix?: string | null
           proforma_invoice_prefix?: string | null
+          purchase_bill_prefix?: string | null
           purchase_order_prefix?: string | null
           sale_order_prefix?: string | null
           sale_prefix?: string | null
@@ -1531,6 +1620,7 @@ export type Database = {
           id?: string
           payment_in_prefix?: string | null
           proforma_invoice_prefix?: string | null
+          purchase_bill_prefix?: string | null
           purchase_order_prefix?: string | null
           sale_order_prefix?: string | null
           sale_prefix?: string | null
