@@ -12,7 +12,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { useCreditNoteNumber } from "@/hooks/useCreditNoteNumber";
 
 interface Customer { id: string; name: string }
-interface Product { id: string; name: string; sale_price: number }
+interface Product { id: string; name: string; sale_price: number; gst_rate?: number }
 
 interface ReturnItem {
   id: string;
@@ -40,7 +40,7 @@ export function SaleReturnForm({ onClose }: SaleReturnFormProps) {
     returnDate: new Date().toISOString().split("T")[0],
     returnType: "credit_note",
     notes: "",
-    taxRate: 18,
+    
   });
 
   const [items, setItems] = useState<ReturnItem[]>([
@@ -55,7 +55,7 @@ export function SaleReturnForm({ onClose }: SaleReturnFormProps) {
     const load = async () => {
       const [{ data: c, error: ce }, { data: p, error: pe }] = await Promise.all([
         supabase.from("customers").select("id,name").order("name"),
-        supabase.from("products").select("id,name,sale_price").order("name"),
+        supabase.from("products").select("id,name,sale_price,gst_rate").order("name"),
       ]);
       if (ce) console.error(ce); else setCustomers(c || []);
       if (pe) console.error(pe); else setProducts(p || []);
@@ -64,7 +64,12 @@ export function SaleReturnForm({ onClose }: SaleReturnFormProps) {
   }, []);
 
   const subtotal = useMemo(() => items.reduce((sum, i) => sum + (i.quantity * i.unitPrice), 0), [items]);
-  const taxAmount = useMemo(() => (subtotal * returnData.taxRate) / 100, [subtotal, returnData.taxRate]);
+const taxAmount = useMemo(() => items.reduce((sum, i) => {
+  if (!i.productId) return sum;
+  const p = products.find((x) => x.id === i.productId);
+  const rate = p?.gst_rate ?? 0;
+  return sum + (i.quantity * i.unitPrice) * (rate / 100);
+}, 0), [items, products]);
   const total = useMemo(() => subtotal + taxAmount, [subtotal, taxAmount]);
 
   const addItem = () => setItems((prev) => ([...prev, { id: Date.now().toString(), productId: null, quantity: 1, unitPrice: 0, returnReason: "" }]));
@@ -295,7 +300,7 @@ export function SaleReturnForm({ onClose }: SaleReturnFormProps) {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex justify-between"><span>Subtotal:</span><span>₹{subtotal.toFixed(2)}</span></div>
-            <div className="flex justify-between"><span>Tax ({returnData.taxRate}%):</span><span>₹{taxAmount.toFixed(2)}</span></div>
+            <div className="flex justify-between"><span>Tax:</span><span>₹{taxAmount.toFixed(2)}</span></div>
             <div className="flex justify-between text-lg font-bold border-t pt-2"><span>Total Return:</span><span>₹{total.toFixed(2)}</span></div>
           </CardContent>
         </Card>
