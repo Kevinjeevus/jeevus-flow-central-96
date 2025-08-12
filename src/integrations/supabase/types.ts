@@ -700,6 +700,90 @@ export type Database = {
           },
         ]
       }
+      payroll_items: {
+        Row: {
+          allowances: number
+          basic: number
+          created_at: string
+          deductions: number
+          employee_id: string
+          gross: number
+          id: string
+          net: number
+          payroll_run_id: string
+        }
+        Insert: {
+          allowances?: number
+          basic?: number
+          created_at?: string
+          deductions?: number
+          employee_id: string
+          gross?: number
+          id?: string
+          net?: number
+          payroll_run_id: string
+        }
+        Update: {
+          allowances?: number
+          basic?: number
+          created_at?: string
+          deductions?: number
+          employee_id?: string
+          gross?: number
+          id?: string
+          net?: number
+          payroll_run_id?: string
+        }
+        Relationships: []
+      }
+      payroll_runs: {
+        Row: {
+          created_at: string
+          employee_count: number
+          id: string
+          notes: string | null
+          period_month: number
+          period_year: number
+          run_date: string
+          status: string
+          total_deductions: number
+          total_gross: number
+          total_net: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          employee_count?: number
+          id?: string
+          notes?: string | null
+          period_month: number
+          period_year: number
+          run_date?: string
+          status?: string
+          total_deductions?: number
+          total_gross?: number
+          total_net?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          employee_count?: number
+          id?: string
+          notes?: string | null
+          period_month?: number
+          period_year?: number
+          run_date?: string
+          status?: string
+          total_deductions?: number
+          total_gross?: number
+          total_net?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       product_categories: {
         Row: {
           created_at: string

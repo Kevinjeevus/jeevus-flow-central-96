@@ -47,6 +47,7 @@ import PaymentOut from "./pages/PaymentOut";
 import PurchaseOrder from "./pages/PurchaseOrder";
 import PurchaseReturn from "./pages/PurchaseReturn";
 import AdminAttendance from "./pages/AdminAttendance";
+import Payroll from "./pages/Payroll";
 
 const queryClient = new QueryClient();
 
@@ -106,6 +107,7 @@ function ProtectedRoutes() {
             <Route path="money/cash-in-hand" element={<CashInHand />} />
             <Route path="money/cheques" element={<Cheques />} />
             <Route path="admin-attendance" element={<AdminAttendance />} />
+            <Route path="payroll" element={<Payroll />} />
           </Routes>
         </ErpLayout>
       } />
