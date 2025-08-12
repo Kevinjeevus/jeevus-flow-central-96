@@ -1039,6 +1039,87 @@ export type Database = {
           },
         ]
       }
+      purchase_return_items: {
+        Row: {
+          created_at: string
+          gst_rate: number | null
+          id: string
+          product_id: string
+          purchase_return_id: string
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          gst_rate?: number | null
+          id?: string
+          product_id: string
+          purchase_return_id: string
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Update: {
+          created_at?: string
+          gst_rate?: number | null
+          id?: string
+          product_id?: string
+          purchase_return_id?: string
+          quantity?: number
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: []
+      }
+      purchase_returns: {
+        Row: {
+          created_at: string
+          debit_note_number: string
+          id: string
+          notes: string | null
+          original_bill_id: string | null
+          return_date: string
+          status: string
+          subtotal: number
+          supplier_id: string
+          tax_amount: number
+          total_amount: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          debit_note_number: string
+          id?: string
+          notes?: string | null
+          original_bill_id?: string | null
+          return_date?: string
+          status?: string
+          subtotal?: number
+          supplier_id: string
+          tax_amount?: number
+          total_amount?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          debit_note_number?: string
+          id?: string
+          notes?: string | null
+          original_bill_id?: string | null
+          return_date?: string
+          status?: string
+          subtotal?: number
+          supplier_id?: string
+          tax_amount?: number
+          total_amount?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       report_configs: {
         Row: {
           created_at: string
@@ -1588,6 +1669,7 @@ export type Database = {
           proforma_invoice_prefix: string | null
           purchase_bill_prefix: string | null
           purchase_order_prefix: string | null
+          purchase_return_prefix: string | null
           sale_order_prefix: string | null
           sale_prefix: string | null
           updated_at: string
@@ -1605,6 +1687,7 @@ export type Database = {
           proforma_invoice_prefix?: string | null
           purchase_bill_prefix?: string | null
           purchase_order_prefix?: string | null
+          purchase_return_prefix?: string | null
           sale_order_prefix?: string | null
           sale_prefix?: string | null
           updated_at?: string
@@ -1622,6 +1705,7 @@ export type Database = {
           proforma_invoice_prefix?: string | null
           purchase_bill_prefix?: string | null
           purchase_order_prefix?: string | null
+          purchase_return_prefix?: string | null
           sale_order_prefix?: string | null
           sale_prefix?: string | null
           updated_at?: string
