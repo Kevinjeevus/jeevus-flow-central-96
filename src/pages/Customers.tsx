@@ -153,7 +153,7 @@ export default function Customers() {
       state: customer.state || "",
       pincode: customer.pincode || "",
       gstin: customer.gstin || "",
-      credit_limit: customer.credit_limit.toString(),
+      credit_limit: (customer.credit_limit ?? 0).toString(),
     });
     setShowEditDialog(true);
   };
@@ -233,7 +233,7 @@ export default function Customers() {
     customer.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const totalOutstanding = customers.reduce((sum, c) => sum + c.outstanding_balance, 0);
+  const totalOutstanding = customers.reduce((sum, c) => sum + (c.outstanding_balance ?? 0), 0);
   const activeCustomers = customers.filter(c => c.status === 'active').length;
 
   return (
@@ -497,10 +497,10 @@ export default function Customers() {
                         </div>
                       ) : "-"}
                     </TableCell>
-                    <TableCell>₹{customer.credit_limit.toLocaleString()}</TableCell>
+                    <TableCell>₹{(customer.credit_limit ?? 0).toLocaleString()}</TableCell>
                     <TableCell>
-                      <span className={customer.outstanding_balance > 0 ? "text-warning font-medium" : ""}>
-                        ₹{customer.outstanding_balance.toLocaleString()}
+                      <span className={(customer.outstanding_balance ?? 0) > 0 ? "text-warning font-medium" : ""}>
+                        ₹{(customer.outstanding_balance ?? 0).toLocaleString()}
                       </span>
                     </TableCell>
                     <TableCell>
