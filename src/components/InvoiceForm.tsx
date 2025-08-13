@@ -745,6 +745,42 @@ export function InvoiceForm({ onClose, onSuccess }: InvoiceFormProps) {
             </div>
           </CardContent>
         </Card>
+
+        {/* Action Buttons */}
+        <div className="lg:col-span-2">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="space-y-3">
+                <Button 
+                  variant="outline" 
+                  className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                  onClick={onClose}
+                >
+                  Cancel
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => handleSave('draft')}
+                  disabled={isLoading}
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {isLoading ? "Saving..." : "Save Draft"}
+                </Button>
+                
+                <Button 
+                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                  onClick={() => handleSave('sent')}
+                  disabled={isLoading}
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  {isLoading ? "Creating..." : "Create Invoice"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
     </>
