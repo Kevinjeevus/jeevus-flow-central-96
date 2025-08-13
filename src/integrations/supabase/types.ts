@@ -144,6 +144,51 @@ export type Database = {
           },
         ]
       }
+      attendance_records: {
+        Row: {
+          approved_by: string | null
+          attendance_date: string
+          break_duration: number | null
+          check_in: string | null
+          check_out: string | null
+          created_at: string
+          employee_id: string
+          id: string
+          notes: string | null
+          overtime_hours: number | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approved_by?: string | null
+          attendance_date: string
+          break_duration?: number | null
+          check_in?: string | null
+          check_out?: string | null
+          created_at?: string
+          employee_id: string
+          id?: string
+          notes?: string | null
+          overtime_hours?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          approved_by?: string | null
+          attendance_date?: string
+          break_duration?: number | null
+          check_in?: string | null
+          check_out?: string | null
+          created_at?: string
+          employee_id?: string
+          id?: string
+          notes?: string | null
+          overtime_hours?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       bank_analysis: {
         Row: {
           account_id: string
@@ -702,85 +747,211 @@ export type Database = {
       }
       payroll_items: {
         Row: {
+          absent_days: number | null
           allowances: number
+          attendance_days: number | null
           basic: number
           created_at: string
           deductions: number
           employee_id: string
+          esi_deduction: number | null
           gross: number
+          hra: number | null
           id: string
+          leave_days: number | null
+          loan_deduction: number | null
+          medical_allowance: number | null
           net: number
+          notes: string | null
+          other_deductions: number | null
+          overtime_amount: number | null
+          overtime_hours: number | null
+          overtime_rate: number | null
           payroll_run_id: string
+          pf_deduction: number | null
+          professional_tax: number | null
+          special_allowance: number | null
+          tax_deduction: number | null
+          transport_allowance: number | null
+          working_days: number | null
         }
         Insert: {
+          absent_days?: number | null
           allowances?: number
+          attendance_days?: number | null
           basic?: number
           created_at?: string
           deductions?: number
           employee_id: string
+          esi_deduction?: number | null
           gross?: number
+          hra?: number | null
           id?: string
+          leave_days?: number | null
+          loan_deduction?: number | null
+          medical_allowance?: number | null
           net?: number
+          notes?: string | null
+          other_deductions?: number | null
+          overtime_amount?: number | null
+          overtime_hours?: number | null
+          overtime_rate?: number | null
           payroll_run_id: string
+          pf_deduction?: number | null
+          professional_tax?: number | null
+          special_allowance?: number | null
+          tax_deduction?: number | null
+          transport_allowance?: number | null
+          working_days?: number | null
         }
         Update: {
+          absent_days?: number | null
           allowances?: number
+          attendance_days?: number | null
           basic?: number
           created_at?: string
           deductions?: number
           employee_id?: string
+          esi_deduction?: number | null
           gross?: number
+          hra?: number | null
           id?: string
+          leave_days?: number | null
+          loan_deduction?: number | null
+          medical_allowance?: number | null
           net?: number
+          notes?: string | null
+          other_deductions?: number | null
+          overtime_amount?: number | null
+          overtime_hours?: number | null
+          overtime_rate?: number | null
           payroll_run_id?: string
+          pf_deduction?: number | null
+          professional_tax?: number | null
+          special_allowance?: number | null
+          tax_deduction?: number | null
+          transport_allowance?: number | null
+          working_days?: number | null
         }
         Relationships: []
       }
       payroll_runs: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           created_at: string
           employee_count: number
           id: string
           notes: string | null
+          overtime_hours: number | null
+          payroll_period_end: string | null
+          payroll_period_start: string | null
           period_month: number
           period_year: number
           run_date: string
           status: string
+          total_allowances: number | null
+          total_basic: number | null
           total_deductions: number
           total_gross: number
           total_net: number
+          total_overtime_amount: number | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           employee_count?: number
           id?: string
           notes?: string | null
+          overtime_hours?: number | null
+          payroll_period_end?: string | null
+          payroll_period_start?: string | null
           period_month: number
           period_year: number
           run_date?: string
           status?: string
+          total_allowances?: number | null
+          total_basic?: number | null
           total_deductions?: number
           total_gross?: number
           total_net?: number
+          total_overtime_amount?: number | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           employee_count?: number
           id?: string
           notes?: string | null
+          overtime_hours?: number | null
+          payroll_period_end?: string | null
+          payroll_period_start?: string | null
           period_month?: number
           period_year?: number
           run_date?: string
           status?: string
+          total_allowances?: number | null
+          total_basic?: number | null
           total_deductions?: number
           total_gross?: number
           total_net?: number
+          total_overtime_amount?: number | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      payroll_settings: {
+        Row: {
+          created_at: string
+          esi_rate: number | null
+          hra_percentage: number | null
+          id: string
+          medical_allowance_amount: number | null
+          overtime_multiplier: number | null
+          pf_rate: number | null
+          professional_tax_slab: Json | null
+          tax_slabs: Json | null
+          transport_allowance_amount: number | null
+          updated_at: string
+          user_id: string
+          working_days_per_month: number | null
+        }
+        Insert: {
+          created_at?: string
+          esi_rate?: number | null
+          hra_percentage?: number | null
+          id?: string
+          medical_allowance_amount?: number | null
+          overtime_multiplier?: number | null
+          pf_rate?: number | null
+          professional_tax_slab?: Json | null
+          tax_slabs?: Json | null
+          transport_allowance_amount?: number | null
+          updated_at?: string
+          user_id: string
+          working_days_per_month?: number | null
+        }
+        Update: {
+          created_at?: string
+          esi_rate?: number | null
+          hra_percentage?: number | null
+          id?: string
+          medical_allowance_amount?: number | null
+          overtime_multiplier?: number | null
+          pf_rate?: number | null
+          professional_tax_slab?: Json | null
+          tax_slabs?: Json | null
+          transport_allowance_amount?: number | null
+          updated_at?: string
+          user_id?: string
+          working_days_per_month?: number | null
         }
         Relationships: []
       }

@@ -2,14 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { ErpLayout } from "@/components/ErpLayout";
-import { Plus, Calendar as CalendarIcon } from "lucide-react";
+import { AdvancedPayrollGenerator } from "@/components/payroll/AdvancedPayrollGenerator";
+import { PayrollRunActions } from "@/components/payroll/PayrollRunActions";
+import { PayrollSettings } from "@/components/payroll/PayrollSettings";
+import { Plus, Settings, Users, TrendingUp, DollarSign } from "lucide-react";
 
 interface PayrollRun {
   id: string;
@@ -18,10 +19,14 @@ interface PayrollRun {
   period_month: number;
   run_date: string;
   employee_count: number;
+  total_basic?: number;
+  total_allowances?: number;
   total_gross: number;
   total_deductions: number;
   total_net: number;
   status: string;
+  approved_by?: string;
+  approved_at?: string;
   notes?: string | null;
 }
 
@@ -33,8 +38,13 @@ export default function Payroll() {
   const [runs, setRuns] = useState<PayrollRun[]>([]);
   const [loading, setLoading] = useState(true);
   const [openGen, setOpenGen] = useState(false);
-  const [month, setMonth] = useState(String(now.getMonth() + 1));
-  const [year, setYear] = useState(String(now.getFullYear()));
+  const [openSettings, setOpenSettings] = useState(false);
+  const [stats, setStats] = useState({
+    totalEmployees: 0,
+    monthlyPayroll: 0,
+    avgSalary: 0,
+    pendingApprovals: 0
+  });
   
   const months = useMemo(() => (
     [
@@ -59,7 +69,10 @@ export default function Payroll() {
   }, [now]);
 
   useEffect(() => {
-    fetchRuns();
+    if (user?.id) {
+      fetchRuns();
+      fetchStats();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
@@ -69,6 +82,7 @@ export default function Payroll() {
       const { data, error } = await supabase
         .from("payroll_runs")
         .select("*")
+        .eq("user_id", user?.id)
         .order("run_date", { ascending: false });
       if (error) throw error;
       setRuns(data || []);
@@ -79,74 +93,55 @@ export default function Payroll() {
     }
   };
 
-  const generatePayroll = async () => {
-    if (!user) return;
+  const fetchStats = async () => {
     try {
-      // 1) Load active employees with salary
-      const { data: employees, error: empErr } = await supabase
+      // Get employee count
+      const { data: employees, error: empError } = await supabase
         .from("employees")
-        .select("id, full_name, salary, is_active")
+        .select("id, salary")
         .eq("is_active", true);
-      if (empErr) throw empErr;
+      
+      if (empError) throw empError;
 
-      const items = (employees || []).map((e) => {
-        const basic = Number(e.salary ?? 0);
-        const allowances = 0;
-        const deductions = 0;
-        const gross = basic + allowances;
-        const net = gross - deductions;
-        return {
-          employee_id: e.id,
-          basic,
-          allowances,
-          deductions,
-          gross,
-          net,
-        };
-      });
-
-      const employee_count = items.length;
-      const total_gross = items.reduce((s, it) => s + (it.gross ?? 0), 0);
-      const total_deductions = items.reduce((s, it) => s + (it.deductions ?? 0), 0);
-      const total_net = items.reduce((s, it) => s + (it.net ?? 0), 0);
-
-      // 2) Create payroll run
-      const runInsert = {
-        user_id: user.id,
-        period_year: Number(year),
-        period_month: Number(month),
-        employee_count,
-        total_gross,
-        total_deductions,
-        total_net,
-        status: "completed",
-      };
-
-      const { data: run, error: runErr } = await supabase
+      // Get latest payroll run
+      const { data: latestRun, error: runError } = await supabase
         .from("payroll_runs")
-        .insert([runInsert])
-        .select("id").single();
-      if (runErr) {
-        // Handle duplicate month/year
-        if (String(runErr.message).toLowerCase().includes("duplicate") || runErr.code === "23505") {
-          toast({ title: "Already exists", description: "A payroll run for this period already exists.", variant: "destructive" });
-          return;
-        }
-        throw runErr;
-      }
+        .select("total_net, status")
+        .eq("user_id", user?.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
 
-      // 3) Insert items
-      if (run?.id && items.length) {
-        const payload = items.map((it) => ({ ...it, payroll_run_id: run.id }));
-        const { error: itemsErr } = await supabase.from("payroll_items").insert(payload);
-        if (itemsErr) throw itemsErr;
-      }
+      // Get pending approvals count
+      const { count: pendingCount, error: pendingError } = await supabase
+        .from("payroll_runs")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user?.id)
+        .eq("status", "completed");
 
-      toast({ title: "Payroll generated", description: `Created payroll for ${months.find(m=>m.value===month)?.label} ${year}` });
-      setOpenGen(false);
-      fetchRuns();
+      const totalEmployees = employees?.length || 0;
+      const totalSalaries = employees?.reduce((sum, emp) => sum + (Number(emp.salary) || 0), 0) || 0;
+      const avgSalary = totalEmployees > 0 ? totalSalaries / totalEmployees : 0;
+      const monthlyPayroll = latestRun?.total_net || 0;
+      const pendingApprovals = pendingCount || 0;
+
+      setStats({
+        totalEmployees,
+        monthlyPayroll,
+        avgSalary,
+        pendingApprovals
+      });
     } catch (e: any) {
-      toast({ title: "Error", description: e.message || "Failed to generate payroll", variant: "destructive" });
+      console.error("Error fetching stats:", e);
+    }
+  };
+
+  const getStatusVariant = (status: string) => {
+    switch (status) {
+      case "completed": return "secondary";
+      case "approved": return "default";
+      case "draft": return "outline";
+      default: return "secondary";
     }
   };
 
@@ -162,64 +157,72 @@ export default function Payroll() {
       <div className="space-y-6 p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Payroll</h1>
-            <p className="text-muted-foreground">Generate monthly payslips and review payroll runs</p>
+            <h1 className="text-3xl font-bold">Advanced Payroll Management</h1>
+            <p className="text-muted-foreground">Comprehensive payroll processing with attendance integration</p>
           </div>
-          <Dialog open={openGen} onOpenChange={setOpenGen}>
-            <DialogTrigger asChild>
-              <Button className="bg-gradient-primary">
-                <Plus className="h-4 w-4 mr-2" />
-                Generate Payroll
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Generate Payroll</DialogTitle>
-                <DialogDescription>Select the month and year to generate payslips</DialogDescription>
-              </DialogHeader>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-muted-foreground mb-1 block">Month</label>
-                  <Select value={month} onValueChange={setMonth}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select month" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {months.map((m) => (
-                        <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-sm text-muted-foreground mb-1 block">Year</label>
-                  <Select value={year} onValueChange={setYear}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select year" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {years.map((y) => (
-                        <SelectItem key={y} value={y}>{y}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="flex justify-end gap-2 mt-4">
-                <Button variant="outline" onClick={() => setOpenGen(false)}>Cancel</Button>
-                <Button onClick={generatePayroll}>
-                  <CalendarIcon className="h-4 w-4 mr-2" />
-                  Generate
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setOpenSettings(true)}>
+              <Settings className="h-4 w-4 mr-2" />
+              Settings
+            </Button>
+            <Button onClick={() => setOpenGen(true)} className="bg-gradient-primary">
+              <Plus className="h-4 w-4 mr-2" />
+              Generate Payroll
+            </Button>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalEmployees}</div>
+              <p className="text-xs text-muted-foreground">Active employees</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Monthly Payroll</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{fmtCurrency(stats.monthlyPayroll)}</div>
+              <p className="text-xs text-muted-foreground">Latest run total</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Average Salary</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{fmtCurrency(stats.avgSalary)}</div>
+              <p className="text-xs text-muted-foreground">Per employee</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Pending Approvals</CardTitle>
+              <Settings className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.pendingApprovals}</div>
+              <p className="text-xs text-muted-foreground">Awaiting approval</p>
+            </CardContent>
+          </Card>
         </div>
 
         <Card className="shadow-card">
           <CardHeader>
             <CardTitle>Payroll Runs</CardTitle>
-            <CardDescription>History of generated payrolls</CardDescription>
+            <CardDescription>History of generated payrolls with advanced tracking</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -228,20 +231,25 @@ export default function Payroll() {
                   <TableHead>Period</TableHead>
                   <TableHead>Run Date</TableHead>
                   <TableHead>Employees</TableHead>
+                  <TableHead>Basic Pay</TableHead>
+                  <TableHead>Allowances</TableHead>
                   <TableHead>Gross</TableHead>
                   <TableHead>Deductions</TableHead>
-                  <TableHead>Net</TableHead>
+                  <TableHead>Net Pay</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="w-[50px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center">Loading...</TableCell>
+                    <TableCell colSpan={10} className="text-center">Loading...</TableCell>
                   </TableRow>
                 ) : runs.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground">No payroll runs yet</TableCell>
+                    <TableCell colSpan={10} className="text-center text-muted-foreground">
+                      No payroll runs yet. Click "Generate Payroll" to create your first run.
+                    </TableCell>
                   </TableRow>
                 ) : (
                   runs.map((r) => (
@@ -249,11 +257,23 @@ export default function Payroll() {
                       <TableCell className="font-medium">{periodText(r.period_month, r.period_year)}</TableCell>
                       <TableCell>{new Date(r.run_date).toLocaleDateString()}</TableCell>
                       <TableCell>{r.employee_count}</TableCell>
-                      <TableCell>{fmtCurrency(r.total_gross)}</TableCell>
-                      <TableCell>{fmtCurrency(r.total_deductions)}</TableCell>
-                      <TableCell>{fmtCurrency(r.total_net)}</TableCell>
+                      <TableCell>{fmtCurrency(r.total_basic || 0)}</TableCell>
+                      <TableCell>{fmtCurrency(r.total_allowances || 0)}</TableCell>
+                      <TableCell className="font-medium">{fmtCurrency(r.total_gross)}</TableCell>
+                      <TableCell className="text-destructive">{fmtCurrency(r.total_deductions)}</TableCell>
+                      <TableCell className="font-bold text-primary">{fmtCurrency(r.total_net)}</TableCell>
                       <TableCell>
-                        <Badge variant={r.status === 'completed' ? 'default' : 'secondary'}>{r.status}</Badge>
+                        <Badge variant={getStatusVariant(r.status)}>
+                          {r.status}
+                          {r.approved_at && " ✓"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <PayrollRunActions 
+                          runId={r.id} 
+                          status={r.status} 
+                          onRefresh={() => { fetchRuns(); fetchStats(); }} 
+                        />
                       </TableCell>
                     </TableRow>
                   ))
@@ -262,6 +282,17 @@ export default function Payroll() {
             </Table>
           </CardContent>
         </Card>
+
+        <AdvancedPayrollGenerator
+          open={openGen}
+          onOpenChange={setOpenGen}
+          onSuccess={() => { fetchRuns(); fetchStats(); }}
+        />
+
+        <PayrollSettings
+          open={openSettings}
+          onOpenChange={setOpenSettings}
+        />
       </div>
     </ErpLayout>
   );
