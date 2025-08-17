@@ -180,18 +180,18 @@ export function PaymentOutForm({ onClose, onSuccess }: PaymentOutFormProps) {
   const selectedAccount = accounts.find(acc => acc.id === paymentData.account_id);
 
   return (
-    <div className="max-w-2xl mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">New Payment Out</h2>
-          <p className="text-muted-foreground">Record a new outgoing payment</p>
+    <div className="max-w-2xl mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="min-w-0">
+          <h2 className="text-xl md:text-2xl font-bold truncate">New Payment Out</h2>
+          <p className="text-sm md:text-base text-muted-foreground">Record a new outgoing payment</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={onClose}>
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-2">
+          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
             <X className="h-4 w-4 mr-2" />
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={isLoading}>
+          <Button onClick={handleSave} disabled={isLoading} className="w-full sm:w-auto">
             <Save className="h-4 w-4 mr-2" />
             {isLoading ? "Saving..." : "Save Payment"}
           </Button>
