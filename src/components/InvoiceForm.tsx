@@ -391,19 +391,6 @@ export function InvoiceForm({ onClose, onSuccess }: InvoiceFormProps) {
           <h2 className="text-xl md:text-2xl font-bold">Create Invoice</h2>
           <p className="text-muted-foreground">Create a new sales invoice</p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
-            Cancel
-          </Button>
-          <Button variant="outline" onClick={() => handleSave('draft')} disabled={isLoading} className="w-full sm:w-auto">
-            <Save className="h-4 w-4 mr-2" />
-            {isLoading ? "Saving..." : "Save Draft"}
-          </Button>
-          <Button className="bg-gradient-primary hover:bg-gradient-primary/90 w-full sm:w-auto" onClick={() => handleSave('sent')} disabled={isLoading}>
-            <Send className="h-4 w-4 mr-2" />
-            {isLoading ? "Creating..." : "Create Invoice"}
-          </Button>
-        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
@@ -747,39 +734,33 @@ export function InvoiceForm({ onClose, onSuccess }: InvoiceFormProps) {
         </Card>
 
         {/* Action Buttons */}
-        <div className="lg:col-span-2">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="space-y-3">
-                <Button 
-                  variant="outline" 
-                  className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                  onClick={onClose}
-                >
-                  Cancel
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={() => handleSave('draft')}
-                  disabled={isLoading}
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  {isLoading ? "Saving..." : "Save Draft"}
-                </Button>
-                
-                <Button 
-                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-                  onClick={() => handleSave('sent')}
-                  disabled={isLoading}
-                >
-                  <Send className="h-4 w-4 mr-2" />
-                  {isLoading ? "Creating..." : "Create Invoice"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="lg:col-span-2 space-y-3">
+          <Button 
+            variant="outline" 
+            className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/80"
+            onClick={onClose}
+          >
+            Cancel
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            className="w-full"
+            onClick={() => handleSave('draft')}
+            disabled={isLoading}
+          >
+            <Save className="h-4 w-4 mr-2" />
+            {isLoading ? "Saving..." : "Save Draft"}
+          </Button>
+          
+          <Button 
+            className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+            onClick={() => handleSave('sent')}
+            disabled={isLoading}
+          >
+            <Send className="h-4 w-4 mr-2" />
+            {isLoading ? "Creating..." : "Create Invoice"}
+          </Button>
         </div>
       </div>
     </div>
