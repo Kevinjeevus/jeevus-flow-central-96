@@ -22,14 +22,10 @@ import OnlineStore from "./pages/OnlineStore";
 import Purchases from "./pages/Purchases";
 import Suppliers from "./pages/Suppliers";
 import Invoices from "./pages/Invoices";
-import RoutesPage from "./pages/Routes";
 import Auth from "./pages/Auth";
 import EmployeeAuth from "./pages/EmployeeAuth";
 import AttendanceLogin from "./pages/AttendanceLogin";
 import Expenses from "./pages/Expenses";
-import SalesmanDashboard from "./pages/SalesmanDashboard";
-import EmployeeDashboard from "./pages/EmployeeDashboard";
-import AttendanceHistory from "./pages/AttendanceHistory";
 import Employees from "./pages/Employees";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -39,14 +35,19 @@ import GSTReturns from "./pages/GSTReturns";
 import Accounts from "./pages/Accounts";
 import BankAnalysis from "./pages/BankAnalysis";
 import FinanceReports from "./pages/FinanceReports";
-import BankAccounts from "./pages/money/BankAccounts";
-import CashInHand from "./pages/money/CashInHand";
-import Cheques from "./pages/money/Cheques";
 import PurchaseBills from "./pages/PurchaseBills";
 import PaymentOut from "./pages/PaymentOut";
 import PurchaseOrder from "./pages/PurchaseOrder";
 import PurchaseReturn from "./pages/PurchaseReturn";
+import RoutesPage from "./pages/Routes";
+import AttendanceHistory from "./pages/AttendanceHistory";
+import EmployeeDashboard from "./pages/EmployeeDashboard";
+import SalesmanDashboard from "./pages/SalesmanDashboard";
+import BankAccounts from "./pages/money/BankAccounts";
+import CashInHand from "./pages/money/CashInHand";
+import Cheques from "./pages/money/Cheques";
 import AdminAttendance from "./pages/AdminAttendance";
+import CRM from "./pages/CRM";
 import Payroll from "./pages/Payroll";
 
 const queryClient = new QueryClient();
@@ -108,6 +109,7 @@ function ProtectedRoutes() {
             <Route path="money/cheques" element={<Cheques />} />
             <Route path="admin-attendance" element={<AdminAttendance />} />
             <Route path="payroll" element={<Payroll />} />
+            <Route path="crm" element={<CRM />} />
           </Routes>
         </ErpLayout>
       } />
