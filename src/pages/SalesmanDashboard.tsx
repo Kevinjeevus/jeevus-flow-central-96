@@ -23,7 +23,7 @@ import { ExpenseForm } from "@/components/ExpenseForm";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
-import { ErpLayout } from "@/components/ErpLayout";
+
 
 interface DashboardStats {
   todaySales: number;
@@ -232,8 +232,8 @@ export default function SalesmanDashboard() {
   };
 
   return (
-    <ErpLayout>
-      <div className="p-6 space-y-6">
+    <div className="min-h-screen bg-background p-4 md:p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
@@ -438,6 +438,6 @@ export default function SalesmanDashboard() {
           </TabsContent>
         </Tabs>
       </div>
-    </ErpLayout>
+    </div>
   );
 }

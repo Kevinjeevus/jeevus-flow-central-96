@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ErpLayout } from "@/components/ErpLayout";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { EmployeeForm } from "@/components/EmployeeForm";
@@ -117,8 +117,8 @@ export default function Employees() {
   };
 
   return (
-    <ErpLayout>
-      <div className="space-y-6">
+    <div className="min-h-screen bg-background p-4 md:p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold">Employee Management</h1>
@@ -323,6 +323,6 @@ export default function Employees() {
           </CardContent>
         </Card>
       </div>
-    </ErpLayout>
+    </div>
   );
 }

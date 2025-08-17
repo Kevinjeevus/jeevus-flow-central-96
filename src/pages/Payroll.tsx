@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { ErpLayout } from "@/components/ErpLayout";
+
 import { AdvancedPayrollGenerator } from "@/components/payroll/AdvancedPayrollGenerator";
 import { PayrollRunActions } from "@/components/payroll/PayrollRunActions";
 import { PayrollSettings } from "@/components/payroll/PayrollSettings";
@@ -153,8 +153,8 @@ export default function Payroll() {
   }, []);
 
   return (
-    <ErpLayout>
-      <div className="space-y-6 p-6">
+    <div className="min-h-screen bg-background p-4 md:p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Advanced Payroll Management</h1>
@@ -294,6 +294,6 @@ export default function Payroll() {
           onOpenChange={setOpenSettings}
         />
       </div>
-    </ErpLayout>
+    </div>
   );
 }
