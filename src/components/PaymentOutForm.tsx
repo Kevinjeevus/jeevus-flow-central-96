@@ -21,7 +21,7 @@ interface Account {
   id: string;
   account_name: string;
   account_type: string;
-  current_balance: number;
+  current_balance: number | null;
   account_number: string;
   bank_name: string;
 }
@@ -113,7 +113,7 @@ export function PaymentOutForm({ onClose, onSuccess }: PaymentOutFormProps) {
 
     // Check if account has sufficient balance
     const selectedAccount = accounts.find(acc => acc.id === paymentData.account_id);
-    if (selectedAccount && selectedAccount.current_balance < amount) {
+    if (selectedAccount && (selectedAccount.current_balance || 0) < amount) {
       toast({
         title: "Error",
         description: "Insufficient account balance",
@@ -244,7 +244,7 @@ export function PaymentOutForm({ onClose, onSuccess }: PaymentOutFormProps) {
                         <div>
                           <div className="font-medium">{account.account_name}</div>
                           <div className="text-sm text-muted-foreground">
-                            Balance: ₹{account.current_balance.toFixed(2)}
+                            Balance: ₹{(account.current_balance || 0).toFixed(2)}
                             {account.account_number && ` • ${account.account_number}`}
                           </div>
                         </div>
@@ -254,7 +254,7 @@ export function PaymentOutForm({ onClose, onSuccess }: PaymentOutFormProps) {
                 </Select>
                 {selectedAccount && (
                   <p className="text-sm text-muted-foreground mt-1">
-                    Available Balance: ₹{selectedAccount.current_balance.toFixed(2)}
+                    Available Balance: ₹{(selectedAccount.current_balance || 0).toFixed(2)}
                   </p>
                 )}
               </div>
