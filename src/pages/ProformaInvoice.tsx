@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Plus, Search, Filter, FileText } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ProformaForm } from "@/components/ProformaForm";
-import { ErpLayout } from "@/components/ErpLayout";
 
 export default function ProformaInvoice() {
   const [showProformaForm, setShowProformaForm] = useState(false);
@@ -15,8 +14,7 @@ export default function ProformaInvoice() {
   }
 
   return (
-    <ErpLayout>
-      <div className="p-6">
+    <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Proforma Invoice</h1>
@@ -63,7 +61,6 @@ export default function ProformaInvoice() {
           </div>
         </CardContent>
       </Card>
-      </div>
-    </ErpLayout>
+    </div>
   );
 }
