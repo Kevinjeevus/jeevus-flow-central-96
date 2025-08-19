@@ -66,53 +66,46 @@ function ProtectedRoutes() {
   return (
     <Routes>
       {/* Employee Dashboard Routes - No ErpLayout */}
-      <Route path="salesman-dashboard" element={<SalesmanDashboard />} />
-      <Route path="employee-dashboard" element={<EmployeeDashboard />} />
-      <Route path="attendance-history" element={<AttendanceHistory />} />
-      <Route path="sale-invoices" element={<SaleInvoices />} />
+      <Route path="/salesman-dashboard" element={<SalesmanDashboard />} />
+      <Route path="/employee-dashboard" element={<EmployeeDashboard />} />
+      <Route path="/attendance-history" element={<AttendanceHistory />} />
       
       {/* Regular ERP Routes with Layout */}
-      <Route path="/*" element={
-        <ErpLayout>
-          <Routes>
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="customers" element={<Customers />} />
-            <Route path="products" element={<Products />} />
-            <Route path="suppliers" element={<Suppliers />} />
-            <Route path="inventory" element={<Inventory />} />
-            <Route path="stock-records" element={<StockRecords />} />
-            <Route path="sales" element={<Sales />} />
-            <Route path="purchases" element={<Purchases />} />
-            <Route path="purchase-bills" element={<PurchaseBills />} />
-            <Route path="payment-out" element={<PaymentOut />} />
-            <Route path="purchase-order" element={<PurchaseOrder />} />
-            <Route path="purchase-return" element={<PurchaseReturn />} />
-            <Route path="invoices" element={<Invoices />} />
-            <Route path="online-store" element={<OnlineStore />} />
-            <Route path="estimate-quotation" element={<EstimateQuotation />} />
-            <Route path="sale-order" element={<SaleOrder />} />
-            <Route path="delivery-challan" element={<DeliveryChallan />} />
-            <Route path="sale-return" element={<SaleReturn />} />
-            <Route path="payment-in" element={<PaymentIn />} />
-            <Route path="proforma-invoice" element={<ProformaInvoice />} />
-            <Route path="sale-invoices" element={<SaleInvoices />} />
-            <Route path="routes" element={<RoutesPage />} />
-            <Route path="expenses" element={<Expenses />} />
-            <Route path="employees" element={<Employees />} />
-            <Route path="administration" element={<Administration />} />
-            <Route path="gst" element={<GSTReturns />} />
-            <Route path="accounts" element={<Accounts />} />
-            <Route path="bank-analysis" element={<BankAnalysis />} />
-            <Route path="finance-reports" element={<FinanceReports />} />
-            <Route path="money/bank-accounts" element={<BankAccounts />} />
-            <Route path="money/cash-in-hand" element={<CashInHand />} />
-            <Route path="money/cheques" element={<Cheques />} />
-            <Route path="admin-attendance" element={<AdminAttendance />} />
-            <Route path="payroll" element={<Payroll />} />
-            <Route path="crm" element={<CRM />} />
-          </Routes>
-        </ErpLayout>
-      } />
+      <Route path="/dashboard" element={<ErpLayout><Dashboard /></ErpLayout>} />
+      <Route path="/customers" element={<ErpLayout><Customers /></ErpLayout>} />
+      <Route path="/products" element={<ErpLayout><Products /></ErpLayout>} />
+      <Route path="/suppliers" element={<ErpLayout><Suppliers /></ErpLayout>} />
+      <Route path="/inventory" element={<ErpLayout><Inventory /></ErpLayout>} />
+      <Route path="/stock-records" element={<ErpLayout><StockRecords /></ErpLayout>} />
+      <Route path="/sales" element={<ErpLayout><Sales /></ErpLayout>} />
+      <Route path="/purchases" element={<ErpLayout><Purchases /></ErpLayout>} />
+      <Route path="/purchase-bills" element={<ErpLayout><PurchaseBills /></ErpLayout>} />
+      <Route path="/payment-out" element={<ErpLayout><PaymentOut /></ErpLayout>} />
+      <Route path="/purchase-order" element={<ErpLayout><PurchaseOrder /></ErpLayout>} />
+      <Route path="/purchase-return" element={<ErpLayout><PurchaseReturn /></ErpLayout>} />
+      <Route path="/invoices" element={<ErpLayout><Invoices /></ErpLayout>} />
+      <Route path="/online-store" element={<ErpLayout><OnlineStore /></ErpLayout>} />
+      <Route path="/estimate-quotation" element={<ErpLayout><EstimateQuotation /></ErpLayout>} />
+      <Route path="/sale-order" element={<ErpLayout><SaleOrder /></ErpLayout>} />
+      <Route path="/delivery-challan" element={<ErpLayout><DeliveryChallan /></ErpLayout>} />
+      <Route path="/sale-return" element={<ErpLayout><SaleReturn /></ErpLayout>} />
+      <Route path="/payment-in" element={<ErpLayout><PaymentIn /></ErpLayout>} />
+      <Route path="/proforma-invoice" element={<ErpLayout><ProformaInvoice /></ErpLayout>} />
+      <Route path="/sale-invoices" element={<ErpLayout><SaleInvoices /></ErpLayout>} />
+      <Route path="/routes" element={<ErpLayout><RoutesPage /></ErpLayout>} />
+      <Route path="/expenses" element={<ErpLayout><Expenses /></ErpLayout>} />
+      <Route path="/employees" element={<ErpLayout><Employees /></ErpLayout>} />
+      <Route path="/administration" element={<ErpLayout><Administration /></ErpLayout>} />
+      <Route path="/gst" element={<ErpLayout><GSTReturns /></ErpLayout>} />
+      <Route path="/accounts" element={<ErpLayout><Accounts /></ErpLayout>} />
+      <Route path="/bank-analysis" element={<ErpLayout><BankAnalysis /></ErpLayout>} />
+      <Route path="/finance-reports" element={<ErpLayout><FinanceReports /></ErpLayout>} />
+      <Route path="/money/bank-accounts" element={<ErpLayout><BankAccounts /></ErpLayout>} />
+      <Route path="/money/cash-in-hand" element={<ErpLayout><CashInHand /></ErpLayout>} />
+      <Route path="/money/cheques" element={<ErpLayout><Cheques /></ErpLayout>} />
+      <Route path="/admin-attendance" element={<ErpLayout><AdminAttendance /></ErpLayout>} />
+      <Route path="/payroll" element={<ErpLayout><Payroll /></ErpLayout>} />
+      <Route path="/crm" element={<ErpLayout><CRM /></ErpLayout>} />
     </Routes>
   );
 }
