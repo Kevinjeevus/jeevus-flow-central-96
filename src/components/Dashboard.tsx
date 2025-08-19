@@ -1,5 +1,7 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -10,47 +12,219 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
-  ArrowUpRight
+  ArrowUpRight,
+  RefreshCw,
+  FileText
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
-const salesData = [
-  { month: "Jan", sales: 65000, target: 70000 },
-  { month: "Feb", sales: 72000, target: 70000 },
-  { month: "Mar", sales: 68000, target: 75000 },
-  { month: "Apr", sales: 81000, target: 80000 },
-  { month: "May", sales: 78000, target: 85000 },
-  { month: "Jun", sales: 92000, target: 90000 },
-];
+interface DashboardMetrics {
+  totalSales: number;
+  monthlyGrowth: number;
+  activeCustomers: number;
+  customerGrowth: number;
+  totalProducts: number;
+  lowStockCount: number;
+  pendingOrders: number;
+  urgentOrders: number;
+}
 
-const categoryData = [
-  { name: "Beverages", value: 35, color: "hsl(var(--primary))" },
-  { name: "Snacks", value: 28, color: "hsl(var(--accent))" },
-  { name: "Dairy", value: 22, color: "hsl(var(--warning))" },
-  { name: "Others", value: 15, color: "hsl(var(--muted-foreground))" },
-];
+interface SalesData {
+  month: string;
+  sales: number;
+  target: number;
+}
 
-const recentOrders = [
-  { id: "SO-001", customer: "ABC Retailers", amount: 25430, status: "delivered", date: "2024-01-08" },
-  { id: "SO-002", customer: "XYZ Stores", amount: 18200, status: "pending", date: "2024-01-08" },
-  { id: "SO-003", customer: "Quick Mart", amount: 32100, status: "processing", date: "2024-01-07" },
-  { id: "SO-004", customer: "Food Hub", amount: 15650, status: "delivered", date: "2024-01-07" },
-];
-
-const lowStockItems = [
-  { product: "Coca Cola 500ml", current: 45, minimum: 100, unit: "bottles" },
-  { product: "Lays Classic 50g", current: 23, minimum: 50, unit: "packets" },
-  { product: "Amul Milk 1L", current: 12, minimum: 30, unit: "packets" },
-];
+interface RecentOrder {
+  id: string;
+  invoice_number: string;
+  customer_name: string;
+  total_amount: number;
+  status: string;
+  invoice_date: string;
+}
 
 export function Dashboard() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [metrics, setMetrics] = useState<DashboardMetrics>({
+    totalSales: 0,
+    monthlyGrowth: 0,
+    activeCustomers: 0,
+    customerGrowth: 0,
+    totalProducts: 0,
+    lowStockCount: 0,
+    pendingOrders: 0,
+    urgentOrders: 0,
+  });
+  const [salesData, setSalesData] = useState<SalesData[]>([]);
+  const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
+
+  useEffect(() => {
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user]);
+
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    try {
+      await Promise.all([
+        fetchMetrics(),
+        fetchSalesData(),
+        fetchRecentOrders(),
+      ]);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard data",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchMetrics = async () => {
+    // Fetch total sales this month
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    
+    const { data: currentSales } = await supabase
+      .from('sales_invoices')
+      .select('total_amount')
+      .gte('invoice_date', startOfMonth.toISOString())
+      .eq('status', 'paid');
+    
+    // Fetch last month sales for growth calculation
+    const lastMonth = new Date();
+    lastMonth.setMonth(lastMonth.getMonth() - 1);
+    lastMonth.setDate(1);
+    lastMonth.setHours(0, 0, 0, 0);
+    
+    const endLastMonth = new Date();
+    endLastMonth.setDate(0);
+    endLastMonth.setHours(23, 59, 59, 999);
+    
+    const { data: lastMonthSales } = await supabase
+      .from('sales_invoices')
+      .select('total_amount')
+      .gte('invoice_date', lastMonth.toISOString())
+      .lte('invoice_date', endLastMonth.toISOString())
+      .eq('status', 'paid');
+
+    // Fetch customer count
+    const { count: customerCount } = await supabase
+      .from('customers')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'active');
+
+    // Fetch product count
+    const { count: productCount } = await supabase
+      .from('products')
+      .select('*', { count: 'exact', head: true });
+
+    // Fetch pending orders
+    const { count: pendingCount } = await supabase
+      .from('sales_orders')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'pending');
+
+    const totalSales = currentSales?.reduce((sum, order) => sum + Number(order.total_amount), 0) || 0;
+    const lastMonthTotal = lastMonthSales?.reduce((sum, order) => sum + Number(order.total_amount), 0) || 0;
+    const monthlyGrowth = lastMonthTotal > 0 ? ((totalSales - lastMonthTotal) / lastMonthTotal) * 100 : 0;
+
+    setMetrics({
+      totalSales,
+      monthlyGrowth,
+      activeCustomers: customerCount || 0,
+      customerGrowth: 8.2, // Mock data for now
+      totalProducts: productCount || 0,
+      lowStockCount: 5, // Mock data for now
+      pendingOrders: pendingCount || 0,
+      urgentOrders: 3, // Mock data for now
+    });
+  };
+
+  const fetchSalesData = async () => {
+    // Fetch last 6 months sales data
+    const months = [];
+    const now = new Date();
+    
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const nextMonth = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+      
+      const { data } = await supabase
+        .from('sales_invoices')
+        .select('total_amount')
+        .gte('invoice_date', date.toISOString())
+        .lt('invoice_date', nextMonth.toISOString())
+        .eq('status', 'paid');
+      
+      const totalSales = data?.reduce((sum, order) => sum + Number(order.total_amount), 0) || 0;
+      
+      months.push({
+        month: date.toLocaleString('default', { month: 'short' }),
+        sales: totalSales,
+        target: totalSales * 1.1, // Mock target 10% higher
+      });
+    }
+    
+    setSalesData(months);
+  };
+
+  const fetchRecentOrders = async () => {
+    const { data } = await supabase
+      .from('sales_invoices')
+      .select(`
+        id,
+        invoice_number,
+        total_amount,
+        status,
+        invoice_date,
+        customers (name)
+      `)
+      .order('created_at', { ascending: false })
+      .limit(4);
+    
+    if (data) {
+      const formattedOrders = data.map(order => ({
+        id: order.id,
+        invoice_number: order.invoice_number,
+        customer_name: order.customers?.name || 'Unknown Customer',
+        total_amount: Number(order.total_amount),
+        status: order.status,
+        invoice_date: order.invoice_date,
+      }));
+      setRecentOrders(formattedOrders);
+    }
+  };
+
+  if (loading) {
+    return <DashboardSkeleton />;
+  }
+
   return (
     <div className="flex-1 space-y-6 p-6">
-      <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Welcome to JEEVUS ERP. Here's what's happening with your business today.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground">
+            Welcome to JEEVUS ERP. Here's what's happening with your business today.
+          </p>
+        </div>
+        <Button onClick={fetchDashboardData} variant="outline" size="sm">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Refresh
+        </Button>
       </div>
 
       {/* Key Metrics */}
@@ -61,11 +235,11 @@ export function Dashboard() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹4,56,300</div>
+            <div className="text-2xl font-bold">₹{metrics.totalSales.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">
-              <span className="text-success flex items-center gap-1">
-                <TrendingUp className="h-3 w-3" />
-                +12.5% from last month
+              <span className={`flex items-center gap-1 ${metrics.monthlyGrowth >= 0 ? 'text-success' : 'text-destructive'}`}>
+                {metrics.monthlyGrowth >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                {metrics.monthlyGrowth >= 0 ? '+' : ''}{metrics.monthlyGrowth.toFixed(1)}% from last month
               </span>
             </p>
           </CardContent>
@@ -77,11 +251,11 @@ export function Dashboard() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1,247</div>
+            <div className="text-2xl font-bold">{metrics.activeCustomers.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">
               <span className="text-success flex items-center gap-1">
                 <TrendingUp className="h-3 w-3" />
-                +8.2% from last month
+                +{metrics.customerGrowth.toFixed(1)}% from last month
               </span>
             </p>
           </CardContent>
@@ -93,11 +267,11 @@ export function Dashboard() {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">342</div>
+            <div className="text-2xl font-bold">{metrics.totalProducts}</div>
             <p className="text-xs text-muted-foreground">
               <span className="text-warning flex items-center gap-1">
                 <AlertTriangle className="h-3 w-3" />
-                5 items low stock
+                {metrics.lowStockCount} items low stock
               </span>
             </p>
           </CardContent>
@@ -109,11 +283,11 @@ export function Dashboard() {
             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">24</div>
+            <div className="text-2xl font-bold">{metrics.pendingOrders}</div>
             <p className="text-xs text-muted-foreground">
               <span className="text-destructive flex items-center gap-1">
                 <TrendingDown className="h-3 w-3" />
-                3 urgent orders
+                {metrics.urgentOrders} urgent orders
               </span>
             </p>
           </CardContent>
@@ -143,28 +317,24 @@ export function Dashboard() {
 
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle>Category Distribution</CardTitle>
-            <CardDescription>Sales by product category</CardDescription>
+            <CardTitle>Monthly Sales Trend</CardTitle>
+            <CardDescription>Sales performance over the last 6 months</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={categoryData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {categoryData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
+              <LineChart data={salesData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip formatter={(value) => [`₹${Number(value).toLocaleString()}`, ""]} />
+                <Line 
+                  type="monotone" 
+                  dataKey="sales" 
+                  stroke="hsl(var(--primary))" 
+                  strokeWidth={2}
+                  dot={{ fill: "hsl(var(--primary))" }}
+                />
+              </LineChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
@@ -179,60 +349,104 @@ export function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentOrders.map((order) => (
+              {recentOrders.length > 0 ? recentOrders.map((order) => (
                 <div key={order.id} className="flex items-center justify-between border-b pb-3 last:border-0">
                   <div className="space-y-1">
-                    <p className="text-sm font-medium">{order.id}</p>
-                    <p className="text-sm text-muted-foreground">{order.customer}</p>
-                    <p className="text-xs text-muted-foreground">{order.date}</p>
+                    <p className="text-sm font-medium">{order.invoice_number}</p>
+                    <p className="text-sm text-muted-foreground">{order.customer_name}</p>
+                    <p className="text-xs text-muted-foreground">{new Date(order.invoice_date).toLocaleDateString()}</p>
                   </div>
                   <div className="text-right space-y-1">
-                    <p className="text-sm font-medium">₹{order.amount.toLocaleString()}</p>
+                    <p className="text-sm font-medium">₹{order.total_amount.toLocaleString()}</p>
                     <Badge variant={
-                      order.status === "delivered" ? "default" : 
+                      order.status === "paid" ? "default" : 
                       order.status === "processing" ? "secondary" : "outline"
                     }>
-                      {order.status === "delivered" && <CheckCircle className="w-3 h-3 mr-1" />}
+                      {order.status === "paid" && <CheckCircle className="w-3 h-3 mr-1" />}
                       {order.status === "processing" && <Clock className="w-3 h-3 mr-1" />}
-                      {order.status === "pending" && <AlertTriangle className="w-3 h-3 mr-1" />}
+                      {order.status === "draft" && <AlertTriangle className="w-3 h-3 mr-1" />}
                       {order.status}
                     </Badge>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No recent invoices</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
 
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle>Low Stock Alert</CardTitle>
-            <CardDescription>Items requiring restock</CardDescription>
+            <CardTitle>Quick Actions</CardTitle>
+            <CardDescription>Common tasks and shortcuts</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {lowStockItems.map((item, index) => (
-                <div key={index} className="flex items-center justify-between border-b pb-3 last:border-0">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium">{item.product}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Current: {item.current} {item.unit}
-                    </p>
-                  </div>
-                  <div className="text-right space-y-1">
-                    <p className="text-sm text-destructive font-medium">
-                      Min: {item.minimum} {item.unit}
-                    </p>
-                    <Badge variant="destructive">
-                      <AlertTriangle className="w-3 h-3 mr-1" />
-                      Low Stock
-                    </Badge>
-                  </div>
-                </div>
-              ))}
+            <div className="grid grid-cols-2 gap-4">
+              <Button variant="outline" className="h-16 flex flex-col gap-1">
+                <ShoppingCart className="h-5 w-5" />
+                <span className="text-xs">New Invoice</span>
+              </Button>
+              <Button variant="outline" className="h-16 flex flex-col gap-1">
+                <Users className="h-5 w-5" />
+                <span className="text-xs">Add Customer</span>
+              </Button>
+              <Button variant="outline" className="h-16 flex flex-col gap-1">
+                <Package className="h-5 w-5" />
+                <span className="text-xs">Manage Stock</span>
+              </Button>
+              <Button variant="outline" className="h-16 flex flex-col gap-1">
+                <FileText className="h-5 w-5" />
+                <span className="text-xs">View Reports</span>
+              </Button>
             </div>
           </CardContent>
         </Card>
+      </div>
+    </div>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="flex-1 space-y-6 p-6">
+      <div>
+        <Skeleton className="h-8 w-48 mb-2" />
+        <Skeleton className="h-4 w-96" />
+      </div>
+
+      {/* Key Metrics Skeleton */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Card key={i} className="shadow-card">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-4 rounded" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-8 w-20 mb-2" />
+              <Skeleton className="h-3 w-32" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Charts Skeleton */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {[1, 2].map((i) => (
+          <Card key={i} className="shadow-card">
+            <CardHeader>
+              <Skeleton className="h-5 w-32 mb-2" />
+              <Skeleton className="h-4 w-48" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-[300px] w-full" />
+            </CardContent>
+          </Card>
+        ))}
       </div>
     </div>
   );
