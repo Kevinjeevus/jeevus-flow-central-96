@@ -32,6 +32,7 @@ import {
   Banknote,
   ArrowUpCircle,
   ArrowDownCircle,
+  ShoppingBag,
 } from "lucide-react";
 
 import {
@@ -61,6 +62,7 @@ const menuItems = [
       { title: "Proforma Invoice", url: "/proforma-invoice", icon: FileText },
       { title: "Payment In", url: "/payment-in", icon: DollarSign },
       { title: "Sale Order", url: "/sale-order", icon: ShoppingCart },
+      { title: "Kevin Sales Center", url: "/kevin-sales", icon: ShoppingBag },
       { title: "Delivery Challan", url: "/delivery-challan", icon: Package },
       { title: "Sale Return/Credit Note", url: "/sale-return", icon: Receipt },
     ],
