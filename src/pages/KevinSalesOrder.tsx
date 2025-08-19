@@ -484,8 +484,7 @@ export default function KevinSalesOrder() {
                         filteredProducts.map((product) => (
                           <Card
                             key={product.id}
-                            className="hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-primary/20 hover:border-l-primary"
-                            onClick={() => addToCart(product)}
+                            className="hover:shadow-lg transition-shadow border-l-4 border-l-primary/20 hover:border-l-primary"
                           >
                             <CardContent className="p-4">
                               <div className="flex justify-between items-start mb-2">
@@ -500,7 +499,14 @@ export default function KevinSalesOrder() {
                                   <p className="font-bold text-primary">₹{product.sale_price}</p>
                                   <p className="text-xs text-muted-foreground">Stock: {product.stock_quantity}</p>
                                 </div>
-                                <Button size="sm" className="bg-gradient-primary hover:opacity-90">
+                                <Button 
+                                  size="sm" 
+                                  className="bg-gradient-primary hover:opacity-90"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    addToCart(product);
+                                  }}
+                                >
                                   <Plus className="h-3 w-3" />
                                 </Button>
                               </div>
