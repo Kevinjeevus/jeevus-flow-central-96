@@ -754,10 +754,29 @@ export default function KevinSalesOrder() {
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2">
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => {
+                                toast({
+                                  title: "View Order",
+                                  description: `Viewing order ${order.order_number}`,
+                                });
+                              }}
+                            >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => {
+                                setEditingOrder(order);
+                                toast({
+                                  title: "Edit Order",
+                                  description: `Edit functionality for order ${order.order_number}`,
+                                });
+                              }}
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
                           </div>
@@ -813,10 +832,29 @@ export default function KevinSalesOrder() {
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2">
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => {
+                                toast({
+                                  title: "View Invoice",
+                                  description: `Viewing invoice ${invoice.invoice_number}`,
+                                });
+                              }}
+                            >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => {
+                                setEditingInvoice(invoice);
+                                toast({
+                                  title: "Edit Invoice",
+                                  description: `Edit functionality for invoice ${invoice.invoice_number}`,
+                                });
+                              }}
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
                           </div>
