@@ -14,7 +14,6 @@ import { CustomerForm } from "@/components/CustomerForm";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useToast } from "@/hooks/use-toast";
-import { ErpLayout } from "@/components/ErpLayout";
 
 interface Invoice {
   id: string;
@@ -361,7 +360,7 @@ export default function SaleInvoices() {
   };
 
   return (
-    <ErpLayout>
+    <>
       {/* Invoice Preview Dialog */}
       {selectedInvoice && (
         <InvoicePreview
@@ -815,6 +814,6 @@ export default function SaleInvoices() {
           )}
         </div>
       </div>
-    </ErpLayout>
+    </>
   );
 }
