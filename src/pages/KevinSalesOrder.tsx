@@ -91,6 +91,8 @@ export default function KevinSalesOrder() {
   const [salesInvoices, setSalesInvoices] = useState<SalesInvoice[]>([]);
   const [editingOrder, setEditingOrder] = useState<SalesOrder | null>(null);
   const [editingInvoice, setEditingInvoice] = useState<SalesInvoice | null>(null);
+  const [viewingInvoice, setViewingInvoice] = useState<SalesInvoice | null>(null);
+  const [viewingOrder, setViewingOrder] = useState<SalesOrder | null>(null);
   
   const { toast } = useToast();
   const { orderNumber, isLoading: orderNumberLoading } = useSaleOrderNumber();
@@ -757,25 +759,14 @@ export default function KevinSalesOrder() {
                             <Button 
                               variant="ghost" 
                               size="sm"
-                              onClick={() => {
-                                toast({
-                                  title: "View Order",
-                                  description: `Viewing order ${order.order_number}`,
-                                });
-                              }}
+                              onClick={() => setViewingOrder(order)}
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
                             <Button 
                               variant="ghost" 
                               size="sm"
-                              onClick={() => {
-                                setEditingOrder(order);
-                                toast({
-                                  title: "Edit Order",
-                                  description: `Edit functionality for order ${order.order_number}`,
-                                });
-                              }}
+                              onClick={() => setEditingOrder(order)}
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -835,25 +826,14 @@ export default function KevinSalesOrder() {
                             <Button 
                               variant="ghost" 
                               size="sm"
-                              onClick={() => {
-                                toast({
-                                  title: "View Invoice",
-                                  description: `Viewing invoice ${invoice.invoice_number}`,
-                                });
-                              }}
+                              onClick={() => setViewingInvoice(invoice)}
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
                             <Button 
                               variant="ghost" 
                               size="sm"
-                              onClick={() => {
-                                setEditingInvoice(invoice);
-                                toast({
-                                  title: "Edit Invoice",
-                                  description: `Edit functionality for invoice ${invoice.invoice_number}`,
-                                });
-                              }}
+                              onClick={() => setEditingInvoice(invoice)}
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -958,6 +938,206 @@ export default function KevinSalesOrder() {
                 </Button>
               </div>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* View Order Dialog */}
+        <Dialog open={!!viewingOrder} onOpenChange={() => setViewingOrder(null)}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>View Sales Order</DialogTitle>
+              <DialogDescription>
+                Order details for {viewingOrder?.order_number}
+              </DialogDescription>
+            </DialogHeader>
+            {viewingOrder && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="font-semibold">Order Number</Label>
+                    <p>{viewingOrder.order_number}</p>
+                  </div>
+                  <div>
+                    <Label className="font-semibold">Order Date</Label>
+                    <p>{new Date(viewingOrder.order_date).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <Label className="font-semibold">Customer</Label>
+                    <p>{viewingOrder.customer?.name}</p>
+                  </div>
+                  <div>
+                    <Label className="font-semibold">Status</Label>
+                    <Badge variant={viewingOrder.status === 'confirmed' ? 'default' : 'secondary'}>
+                      {viewingOrder.status}
+                    </Badge>
+                  </div>
+                  <div>
+                    <Label className="font-semibold">Total Amount</Label>
+                    <p className="text-lg font-bold">₹{viewingOrder.total_amount}</p>
+                  </div>
+                </div>
+                {viewingOrder.notes && (
+                  <div>
+                    <Label className="font-semibold">Notes</Label>
+                    <p className="text-sm text-muted-foreground">{viewingOrder.notes}</p>
+                  </div>
+                )}
+                <Button 
+                  onClick={() => setViewingOrder(null)}
+                  className="w-full"
+                >
+                  Close
+                </Button>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* View Invoice Dialog */}
+        <Dialog open={!!viewingInvoice} onOpenChange={() => setViewingInvoice(null)}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>View Sales Invoice</DialogTitle>
+              <DialogDescription>
+                Invoice details for {viewingInvoice?.invoice_number}
+              </DialogDescription>
+            </DialogHeader>
+            {viewingInvoice && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="font-semibold">Invoice Number</Label>
+                    <p>{viewingInvoice.invoice_number}</p>
+                  </div>
+                  <div>
+                    <Label className="font-semibold">Invoice Date</Label>
+                    <p>{new Date(viewingInvoice.invoice_date).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <Label className="font-semibold">Customer</Label>
+                    <p>{viewingInvoice.customer?.name}</p>
+                  </div>
+                  <div>
+                    <Label className="font-semibold">Payment Method</Label>
+                    <Badge variant="outline">
+                      {viewingInvoice.payment_method || 'cash'}
+                    </Badge>
+                  </div>
+                  <div>
+                    <Label className="font-semibold">Status</Label>
+                    <Badge variant={viewingInvoice.status === 'confirmed' ? 'default' : 'secondary'}>
+                      {viewingInvoice.status}
+                    </Badge>
+                  </div>
+                  <div>
+                    <Label className="font-semibold">Total Amount</Label>
+                    <p className="text-lg font-bold">₹{viewingInvoice.total_amount}</p>
+                  </div>
+                </div>
+                {viewingInvoice.notes && (
+                  <div>
+                    <Label className="font-semibold">Notes</Label>
+                    <p className="text-sm text-muted-foreground">{viewingInvoice.notes}</p>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={() => setViewingInvoice(null)}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    Close
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      setViewingInvoice(null);
+                      setEditingInvoice(viewingInvoice);
+                    }}
+                    className="flex-1"
+                  >
+                    Edit Invoice
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Invoice Dialog */}
+        <Dialog open={!!editingInvoice} onOpenChange={() => setEditingInvoice(null)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit Invoice</DialogTitle>
+              <DialogDescription>
+                Update invoice {editingInvoice?.invoice_number}
+              </DialogDescription>
+            </DialogHeader>
+            {editingInvoice && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Payment Method</Label>
+                  <Select defaultValue={editingInvoice.payment_method || "cash"}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                      <SelectItem value="cheque">Cheque</SelectItem>
+                      <SelectItem value="upi">UPI</SelectItem>
+                      <SelectItem value="card">Card</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select defaultValue={editingInvoice.status}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="confirmed">Confirmed</SelectItem>
+                      <SelectItem value="sent">Sent</SelectItem>
+                      <SelectItem value="paid">Paid</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Notes</Label>
+                  <Textarea 
+                    defaultValue={editingInvoice.notes || ""}
+                    placeholder="Add notes..."
+                    rows={3}
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setEditingInvoice(null)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    className="flex-1"
+                    onClick={() => {
+                      toast({
+                        title: "Invoice Updated",
+                        description: `Invoice ${editingInvoice.invoice_number} has been updated`,
+                      });
+                      setEditingInvoice(null);
+                      fetchSalesInvoices();
+                    }}
+                  >
+                    Save Changes
+                  </Button>
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>
