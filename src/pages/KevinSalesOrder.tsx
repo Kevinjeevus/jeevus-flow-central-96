@@ -16,6 +16,7 @@ import { useSaleOrderNumber } from "@/hooks/useSaleOrderNumber";
 import { useInvoiceNumber } from "@/hooks/useInvoiceNumber";
 import { CustomerForm } from "@/components/CustomerForm";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { InvoicePreview } from "@/components/InvoicePreview";
 
 interface Product {
   id: string;
@@ -93,6 +94,8 @@ export default function KevinSalesOrder() {
   const [editingInvoice, setEditingInvoice] = useState<SalesInvoice | null>(null);
   const [viewingInvoice, setViewingInvoice] = useState<SalesInvoice | null>(null);
   const [viewingOrder, setViewingOrder] = useState<SalesOrder | null>(null);
+  const [fullInvoiceData, setFullInvoiceData] = useState<any>(null);
+  const [showFullInvoicePreview, setShowFullInvoicePreview] = useState(false);
   
   const { toast } = useToast();
   const { orderNumber, isLoading: orderNumberLoading } = useSaleOrderNumber();
@@ -189,6 +192,85 @@ export default function KevinSalesOrder() {
       setSalesInvoices(data || []);
     } catch (error) {
       console.error("Failed to load sales invoices:", error);
+    }
+  };
+
+  const fetchFullInvoiceData = async (invoiceId: string) => {
+    try {
+      // Fetch invoice with customer and items
+      const { data: invoiceData, error: invoiceError } = await supabase
+        .from("sales_invoices")
+        .select(`
+          *,
+          customer:customers(*),
+          sales_invoice_items(
+            *,
+            product:products(*)
+          )
+        `)
+        .eq("id", invoiceId)
+        .single();
+
+      if (invoiceError) throw invoiceError;
+
+      // Fetch payment account details if available
+      let bankAccount = null;
+      if (invoiceData.payment_account_id) {
+        const { data: accountData } = await supabase
+          .from("accounts")
+          .select("*")
+          .eq("id", invoiceData.payment_account_id)
+          .single();
+        
+        if (accountData) {
+          bankAccount = {
+            account_name: accountData.account_name,
+            account_number: accountData.account_number || '',
+            bank_name: accountData.bank_name || '',
+            ifsc_code: accountData.ifsc_code || '',
+            account_holder_name: accountData.account_holder_name || ''
+          };
+        }
+      }
+
+      // Transform data to match InvoiceData interface
+      const transformedData = {
+        id: invoiceData.id,
+        invoice_number: invoiceData.invoice_number,
+        invoice_date: invoiceData.invoice_date,
+        payment_method: invoiceData.payment_method,
+        customer: {
+          name: invoiceData.customer.name,
+          email: invoiceData.customer.email || '',
+          phone: invoiceData.customer.phone || '',
+          address: invoiceData.customer.address || '',
+          gstin: invoiceData.customer.gstin || ''
+        },
+        items: invoiceData.sales_invoice_items.map((item: any) => ({
+          product_name: item.product.name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total_price: item.total_price,
+          hsn_code: item.product.hsn_code || '',
+          gst_rate: item.product.gst_rate || 18,
+          unit: item.product.unit || 'Nos'
+        })),
+        subtotal: invoiceData.subtotal,
+        tax_amount: invoiceData.tax_amount,
+        total_amount: invoiceData.total_amount,
+        notes: invoiceData.notes,
+        bank_account: bankAccount
+      };
+
+      setFullInvoiceData(transformedData);
+      setShowFullInvoicePreview(true);
+    } catch (error) {
+      console.error("Failed to fetch full invoice data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load invoice details",
+        variant: "destructive"
+      });
     }
   };
 
@@ -826,7 +908,7 @@ export default function KevinSalesOrder() {
                             <Button 
                               variant="ghost" 
                               size="sm"
-                              onClick={() => setViewingInvoice(invoice)}
+                              onClick={() => fetchFullInvoiceData(invoice.id)}
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
@@ -1140,6 +1222,88 @@ export default function KevinSalesOrder() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Edit Order Dialog */}
+        <Dialog open={!!editingOrder} onOpenChange={() => setEditingOrder(null)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit Order</DialogTitle>
+              <DialogDescription>
+                Update order {editingOrder?.order_number}
+              </DialogDescription>
+            </DialogHeader>
+            {editingOrder && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select defaultValue={editingOrder.status}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="confirmed">Confirmed</SelectItem>
+                      <SelectItem value="shipped">Shipped</SelectItem>
+                      <SelectItem value="delivered">Delivered</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Notes</Label>
+                  <Textarea 
+                    defaultValue={editingOrder.notes || ""}
+                    placeholder="Add notes..."
+                    rows={3}
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setEditingOrder(null)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    className="flex-1"
+                    onClick={() => {
+                      toast({
+                        title: "Order Updated",
+                        description: `Order ${editingOrder.order_number} has been updated`,
+                      });
+                      setEditingOrder(null);
+                      fetchSalesOrders();
+                    }}
+                  >
+                    Save Changes
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Full Invoice Preview */}
+        {fullInvoiceData && (
+          <InvoicePreview
+            isOpen={showFullInvoicePreview}
+            onClose={() => {
+              setShowFullInvoicePreview(false);
+              setFullInvoiceData(null);
+            }}
+            invoiceData={fullInvoiceData}
+            onEdit={() => {
+              setShowFullInvoicePreview(false);
+              // Find the invoice and set it for editing
+              const invoice = salesInvoices.find(inv => inv.id === fullInvoiceData.id);
+              if (invoice) setEditingInvoice(invoice);
+            }}
+            onRefresh={fetchSalesInvoices}
+          />
+        )}
       </div>
     </div>
   );
