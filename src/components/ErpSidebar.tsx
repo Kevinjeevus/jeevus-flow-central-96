@@ -33,6 +33,7 @@ import {
   ArrowUpCircle,
   ArrowDownCircle,
   ShoppingBag,
+  Tag,
 } from "lucide-react";
 
 import {
@@ -65,6 +66,15 @@ const menuItems = [
       { title: "Kevin Sales Center", url: "/kevin-sales", icon: ShoppingBag },
       { title: "Delivery Challan", url: "/delivery-challan", icon: Package },
       { title: "Sale Return/Credit Note", url: "/sale-return", icon: Receipt },
+    ],
+  },
+  {
+    title: "Offers",
+    icon: Tag,
+    children: [
+      { title: "Discounts", url: "/offers?tab=discounts", icon: Percent },
+      { title: "Gifts", url: "/offers?tab=gifts", icon: Gift },
+      { title: "Coupons", url: "/offers?tab=coupons", icon: Tag },
     ],
   },
   {

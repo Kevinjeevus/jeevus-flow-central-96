@@ -50,6 +50,7 @@ import AdminAttendance from "./pages/AdminAttendance";
 import CRM from "./pages/CRM";
 import Payroll from "./pages/Payroll";
 import KevinSalesOrder from "./pages/KevinSalesOrder";
+import Offers from "./pages/Offers";
 
 const queryClient = new QueryClient();
 
@@ -107,6 +108,7 @@ function ProtectedRoutes() {
       <Route path="/admin-attendance" element={<ErpLayout><AdminAttendance /></ErpLayout>} />
       <Route path="/payroll" element={<ErpLayout><Payroll /></ErpLayout>} />
       <Route path="/crm" element={<ErpLayout><CRM /></ErpLayout>} />
+      <Route path="/offers" element={<ErpLayout><Offers /></ErpLayout>} />
       <Route path="/kevin-sales" element={<KevinSalesOrder />} />
     </Routes>
   );
