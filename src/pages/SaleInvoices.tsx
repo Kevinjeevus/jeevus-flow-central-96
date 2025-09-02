@@ -337,12 +337,21 @@ export default function SaleInvoices() {
     }
 
     try {
-      const { error } = await supabase
+      // First delete the invoice items
+      const { error: itemsError } = await supabase
+        .from('sales_invoice_items')
+        .delete()
+        .eq('sales_invoice_id', invoiceId);
+
+      if (itemsError) throw itemsError;
+
+      // Then delete the invoice
+      const { error: invoiceError } = await supabase
         .from('sales_invoices')
         .delete()
         .eq('id', invoiceId);
 
-      if (error) throw error;
+      if (invoiceError) throw invoiceError;
 
       toast({
         title: "Success",
