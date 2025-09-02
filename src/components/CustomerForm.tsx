@@ -45,6 +45,24 @@ export function CustomerForm({ onClose, onSuccess, initialName = "" }: CustomerF
       return;
     }
 
+    if (!customerData.phone.trim()) {
+      toast({
+        title: "Error",
+        description: "Phone number is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!customerData.address.trim()) {
+      toast({
+        title: "Error",
+        description: "Address is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       const { data: newCustomer, error } = await supabase
@@ -53,8 +71,8 @@ export function CustomerForm({ onClose, onSuccess, initialName = "" }: CustomerF
           name: customerData.name.trim(),
           company: customerData.company.trim() || null,
           email: customerData.email.trim() || null,
-          phone: customerData.phone.trim() || null,
-          address: customerData.address.trim() || null,
+          phone: customerData.phone.trim(),
+          address: customerData.address.trim(),
           city: customerData.city.trim() || null,
           state: customerData.state.trim() || null,
           pincode: customerData.pincode.trim() || null,
@@ -139,12 +157,13 @@ export function CustomerForm({ onClose, onSuccess, initialName = "" }: CustomerF
                 />
               </div>
               <div>
-                <Label htmlFor="phone">Phone Number</Label>
+                <Label htmlFor="phone">Phone Number *</Label>
                 <Input
                   id="phone"
                   value={customerData.phone}
                   onChange={(e) => setCustomerData({...customerData, phone: e.target.value})}
                   placeholder="Enter phone number"
+                  required
                 />
               </div>
             </CardContent>
@@ -157,13 +176,14 @@ export function CustomerForm({ onClose, onSuccess, initialName = "" }: CustomerF
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="address">Address</Label>
+                <Label htmlFor="address">Address *</Label>
                 <Textarea
                   id="address"
                   value={customerData.address}
                   onChange={(e) => setCustomerData({...customerData, address: e.target.value})}
                   placeholder="Enter complete address"
                   rows={3}
+                  required
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
