@@ -105,22 +105,22 @@ export function CustomerForm({ onClose, onSuccess, initialName = "" }: CustomerF
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
+    <div className="w-full max-w-4xl mx-auto space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Add New Customer</h2>
-          <p className="text-muted-foreground">Add a customer to your route</p>
+          <h2 className="text-xl sm:text-2xl font-bold">Add New Customer</h2>
+          <p className="text-muted-foreground text-sm sm:text-base">Add a customer to your route</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} size="sm">
             <X className="h-4 w-4 mr-2" />
             Cancel
           </Button>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           <Card>
             <CardHeader>
               <CardTitle>Basic Information</CardTitle>
@@ -241,10 +241,10 @@ export function CustomerForm({ onClose, onSuccess, initialName = "" }: CustomerF
           </Card>
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex justify-end pt-4 border-t">
           <Button 
             type="submit" 
-            className="bg-gradient-primary hover:bg-gradient-primary/90"
+            className="bg-gradient-primary hover:bg-gradient-primary/90 w-full sm:w-auto"
             disabled={isLoading}
           >
             <Save className="h-4 w-4 mr-2" />

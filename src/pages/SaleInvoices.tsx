@@ -632,14 +632,16 @@ export default function SaleInvoices() {
                         <Plus className="h-4 w-4" />
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-y-auto">
-                      <InvoiceForm
-                        onSuccess={() => {
-                          setIsInvoiceDialogOpen(false);
-                          fetchInvoices();
-                        }}
-                        onClose={() => setIsInvoiceDialogOpen(false)}
-                      />
+                    <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-hidden p-0">
+                      <div className="overflow-y-auto max-h-[95vh] p-6">
+                        <InvoiceForm
+                          onSuccess={() => {
+                            setIsInvoiceDialogOpen(false);
+                            fetchInvoices();
+                          }}
+                          onClose={() => setIsInvoiceDialogOpen(false)}
+                        />
+                      </div>
                     </DialogContent>
                   </Dialog>
                 </div>
@@ -762,14 +764,16 @@ export default function SaleInvoices() {
                         <Plus className="h-4 w-4" />
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-y-auto">
-                      <CustomerForm
-                        onSuccess={() => {
-                          setIsCustomerDialogOpen(false);
-                          fetchCustomers();
-                        }}
-                        onClose={() => setIsCustomerDialogOpen(false)}
-                      />
+                    <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-hidden p-0">
+                      <div className="overflow-y-auto max-h-[95vh] p-6">
+                        <CustomerForm
+                          onSuccess={() => {
+                            setIsCustomerDialogOpen(false);
+                            fetchCustomers();
+                          }}
+                          onClose={() => setIsCustomerDialogOpen(false)}
+                        />
+                      </div>
                     </DialogContent>
                   </Dialog>
                 </div>
