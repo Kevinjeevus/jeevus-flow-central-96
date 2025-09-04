@@ -681,13 +681,13 @@ export default function SaleInvoices() {
                         <div className="font-medium">{invoice.invoice_number}</div>
                         <div className="font-medium">₹{invoice.total_amount.toLocaleString()}</div>
                       </div>
-                      <div className="space-y-1">
-                        <div className="text-sm text-muted-foreground">
-                          Customer: {invoice.customer?.name}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          Date: {new Date(invoice.invoice_date).toLocaleDateString()}
-                        </div>
+                       <div className="space-y-1">
+                         <div className="text-sm text-muted-foreground truncate">
+                           Customer: {invoice.customer?.name}
+                         </div>
+                         <div className="text-sm text-muted-foreground">
+                           Date: {new Date(invoice.invoice_date).toLocaleDateString()}
+                         </div>
                         {userProfile?.role === 'admin' && (
                           <>
                             {invoice.route && (
@@ -702,38 +702,39 @@ export default function SaleInvoices() {
                             )}
                           </>
                         )}
-                         <div className="flex justify-between items-center">
-                           <div>{getStatusBadge(invoice.status)}</div>
-                           <div className="flex gap-1">
-                             <Button 
-                               variant="ghost" 
-                               size="sm"
-                               onClick={() => handleViewInvoice(invoice.id)}
-                             >
-                               <Eye className="h-4 w-4" />
-                             </Button>
-                             <DropdownMenu>
-                               <DropdownMenuTrigger asChild>
-                                 <Button variant="ghost" size="sm">
-                                   <MoreHorizontal className="h-4 w-4" />
-                                 </Button>
-                               </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => handleShareInvoice(invoice)}>
-                                    <Share className="h-4 w-4 mr-2" />
-                                    Share
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => handleDeleteInvoice(invoice.id)}
-                                    className="text-destructive"
-                                  >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                             </DropdownMenu>
-                           </div>
-                         </div>
+                        <div className="flex justify-between items-center mt-3 pt-2 border-t">
+                          <div>{getStatusBadge(invoice.status)}</div>
+                          <div className="flex gap-1 shrink-0">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleViewInvoice(invoice.id)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-40">
+                                <DropdownMenuItem onClick={() => handleShareInvoice(invoice)}>
+                                  <Share className="h-4 w-4 mr-2" />
+                                  Share
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleDeleteInvoice(invoice.id)}
+                                  className="text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -794,21 +795,21 @@ export default function SaleInvoices() {
                     >
                       <div className="space-y-2">
                         <div className="font-medium">{customer.name}</div>
-                        <div className="space-y-1">
-                          <div className="text-sm text-muted-foreground flex items-center gap-2">
-                            📞 {customer.phone}
-                          </div>
-                          {customer.email && (
-                            <div className="text-sm text-muted-foreground flex items-center gap-2">
-                              ✉️ {customer.email}
-                            </div>
-                          )}
-                          {customer.city && (
-                            <div className="text-sm text-muted-foreground flex items-center gap-2">
-                              📍 {customer.city}
-                            </div>
-                          )}
-                        </div>
+                         <div className="space-y-1">
+                           <div className="text-sm text-muted-foreground break-all">
+                             📞 {customer.phone}
+                           </div>
+                           {customer.email && (
+                             <div className="text-sm text-muted-foreground break-all">
+                               ✉️ {customer.email}
+                             </div>
+                           )}
+                           {customer.city && (
+                             <div className="text-sm text-muted-foreground">
+                               📍 {customer.city}
+                             </div>
+                           )}
+                         </div>
                       </div>
                     </div>
                   ))}
