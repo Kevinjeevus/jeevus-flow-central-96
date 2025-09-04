@@ -105,7 +105,7 @@ export function CustomerForm({ onClose, onSuccess, initialName = "" }: CustomerF
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-4 sm:space-y-6">
+    <div className="w-full max-w-4xl mx-auto space-y-3 sm:space-y-6 px-1 sm:px-0">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold">Add New Customer</h2>
