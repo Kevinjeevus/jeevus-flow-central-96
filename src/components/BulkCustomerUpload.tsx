@@ -194,6 +194,27 @@ export function BulkCustomerUpload({ onSuccess }: BulkCustomerUploadProps) {
     }
   };
 
+  const updateCustomer = (index: number, field: keyof CustomerRow, value: any) => {
+    const updatedCustomers = [...customers];
+    updatedCustomers[index] = { ...updatedCustomers[index], [field]: value };
+    setCustomers(updatedCustomers);
+    
+    // Re-validate after update
+    const validateErrors: string[] = [];
+    updatedCustomers.forEach((customer, idx) => {
+      if (!customer.name) {
+        validateErrors.push(`Row ${idx + 2}: Customer name is required`);
+      }
+      if (customer.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email)) {
+        validateErrors.push(`Row ${idx + 2}: Invalid email format`);
+      }
+      if (customer.phone && !/^\d{10}$/.test(customer.phone.replace(/\D/g, ''))) {
+        validateErrors.push(`Row ${idx + 2}: Phone number should be 10 digits`);
+      }
+    });
+    setErrors(validateErrors);
+  };
+
   const resetState = () => {
     setFile(null);
     setCustomers([]);
@@ -279,7 +300,7 @@ export function BulkCustomerUpload({ onSuccess }: BulkCustomerUploadProps) {
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  Step 3: Review Data
+                  Step 3: Review & Edit Data
                   {errors.length === 0 ? (
                     <Badge variant="secondary" className="bg-green-100 text-green-800">
                       <CheckCircle className="h-3 w-3 mr-1" />
@@ -315,6 +336,97 @@ export function BulkCustomerUpload({ onSuccess }: BulkCustomerUploadProps) {
                       </div>
                     </AlertDescription>
                   </Alert>
+                )}
+
+                {/* Editable Customer Data Table */}
+                {customers.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium">Review and edit customer data:</div>
+                    <div className="border rounded-lg max-h-96 overflow-auto">
+                      <table className="w-full text-xs">
+                        <thead className="bg-muted/50 sticky top-0">
+                          <tr>
+                            <th className="p-2 text-left border-r">Name*</th>
+                            <th className="p-2 text-left border-r">Email</th>
+                            <th className="p-2 text-left border-r">Phone</th>
+                            <th className="p-2 text-left border-r">Company</th>
+                            <th className="p-2 text-left border-r">City</th>
+                            <th className="p-2 text-left border-r">GSTIN</th>
+                            <th className="p-2 text-left">Credit Limit</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {customers.map((customer, index) => (
+                            <tr key={index} className="border-t hover:bg-muted/30">
+                              <td className="p-1 border-r">
+                                <input
+                                  type="text"
+                                  value={customer.name}
+                                  onChange={(e) => updateCustomer(index, 'name', e.target.value)}
+                                  className="w-full p-1 text-xs border rounded"
+                                  placeholder="Customer name"
+                                />
+                              </td>
+                              <td className="p-1 border-r">
+                                <input
+                                  type="email"
+                                  value={customer.email || ''}
+                                  onChange={(e) => updateCustomer(index, 'email', e.target.value)}
+                                  className="w-full p-1 text-xs border rounded"
+                                  placeholder="Email"
+                                />
+                              </td>
+                              <td className="p-1 border-r">
+                                <input
+                                  type="text"
+                                  value={customer.phone || ''}
+                                  onChange={(e) => updateCustomer(index, 'phone', e.target.value)}
+                                  className="w-full p-1 text-xs border rounded"
+                                  placeholder="Phone"
+                                />
+                              </td>
+                              <td className="p-1 border-r">
+                                <input
+                                  type="text"
+                                  value={customer.company || ''}
+                                  onChange={(e) => updateCustomer(index, 'company', e.target.value)}
+                                  className="w-full p-1 text-xs border rounded"
+                                  placeholder="Company"
+                                />
+                              </td>
+                              <td className="p-1 border-r">
+                                <input
+                                  type="text"
+                                  value={customer.city || ''}
+                                  onChange={(e) => updateCustomer(index, 'city', e.target.value)}
+                                  className="w-full p-1 text-xs border rounded"
+                                  placeholder="City"
+                                />
+                              </td>
+                              <td className="p-1 border-r">
+                                <input
+                                  type="text"
+                                  value={customer.gstin || ''}
+                                  onChange={(e) => updateCustomer(index, 'gstin', e.target.value)}
+                                  className="w-full p-1 text-xs border rounded"
+                                  placeholder="GSTIN"
+                                />
+                              </td>
+                              <td className="p-1">
+                                <input
+                                  type="number"
+                                  value={customer.credit_limit || 0}
+                                  onChange={(e) => updateCustomer(index, 'credit_limit', parseFloat(e.target.value) || 0)}
+                                  className="w-full p-1 text-xs border rounded"
+                                  placeholder="0"
+                                />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 )}
 
                 {isProcessing && (
