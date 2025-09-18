@@ -32,6 +32,8 @@ export function BulkCustomerUpload({ onSuccess }: BulkCustomerUploadProps) {
   const [file, setFile] = useState<File | null>(null);
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
+  const [rowErrors, setRowErrors] = useState<Set<number>>(new Set());
+  const [showErrorsOnly, setShowErrorsOnly] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const { toast } = useToast();
@@ -87,6 +89,7 @@ export function BulkCustomerUpload({ onSuccess }: BulkCustomerUploadProps) {
 
         const parsedCustomers: CustomerRow[] = [];
         const parseErrors: string[] = [];
+        const errorRows = new Set<number>();
 
         jsonData.forEach((row, index) => {
           const customer: CustomerRow = {
@@ -105,16 +108,19 @@ export function BulkCustomerUpload({ onSuccess }: BulkCustomerUploadProps) {
           // Validate required fields
           if (!customer.name) {
             parseErrors.push(`Row ${index + 2}: Customer name is required`);
+            errorRows.add(index);
           }
 
           // Validate email format if provided
           if (customer.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email)) {
             parseErrors.push(`Row ${index + 2}: Invalid email format`);
+            errorRows.add(index);
           }
 
           // Validate phone number format if provided
           if (customer.phone && !/^\d{10}$/.test(customer.phone.replace(/\D/g, ''))) {
             parseErrors.push(`Row ${index + 2}: Phone number should be 10 digits`);
+            errorRows.add(index);
           }
 
           parsedCustomers.push(customer);
@@ -122,6 +128,7 @@ export function BulkCustomerUpload({ onSuccess }: BulkCustomerUploadProps) {
 
         setCustomers(parsedCustomers);
         setErrors(parseErrors);
+        setRowErrors(errorRows);
       } catch (error) {
         toast({
           title: "Error parsing file",
@@ -201,24 +208,33 @@ export function BulkCustomerUpload({ onSuccess }: BulkCustomerUploadProps) {
     
     // Re-validate after update
     const validateErrors: string[] = [];
+    const errorRows = new Set<number>();
+    
     updatedCustomers.forEach((customer, idx) => {
       if (!customer.name) {
         validateErrors.push(`Row ${idx + 2}: Customer name is required`);
+        errorRows.add(idx);
       }
       if (customer.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email)) {
         validateErrors.push(`Row ${idx + 2}: Invalid email format`);
+        errorRows.add(idx);
       }
       if (customer.phone && !/^\d{10}$/.test(customer.phone.replace(/\D/g, ''))) {
         validateErrors.push(`Row ${idx + 2}: Phone number should be 10 digits`);
+        errorRows.add(idx);
       }
     });
+    
     setErrors(validateErrors);
+    setRowErrors(errorRows);
   };
 
   const resetState = () => {
     setFile(null);
     setCustomers([]);
     setErrors([]);
+    setRowErrors(new Set());
+    setShowErrorsOnly(false);
     setUploadProgress(0);
     setIsProcessing(false);
   };
@@ -234,7 +250,7 @@ export function BulkCustomerUpload({ onSuccess }: BulkCustomerUploadProps) {
           Bulk Upload
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Bulk Customer Upload</DialogTitle>
           <DialogDescription>
@@ -242,7 +258,7 @@ export function BulkCustomerUpload({ onSuccess }: BulkCustomerUploadProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-y-auto flex-1 px-1">
           {/* Template Download */}
           <Card>
             <CardHeader className="pb-3">
@@ -340,11 +356,23 @@ export function BulkCustomerUpload({ onSuccess }: BulkCustomerUploadProps) {
 
                 {/* Editable Customer Data Table */}
                 {customers.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium">Review and edit customer data:</div>
-                    <div className="border rounded-lg max-h-96 overflow-auto">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm font-medium">Review and edit customer data:</div>
+                      {rowErrors.size > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowErrorsOnly(!showErrorsOnly)}
+                          className="text-xs"
+                        >
+                          {showErrorsOnly ? 'Show All' : `Show Errors Only (${rowErrors.size})`}
+                        </Button>
+                      )}
+                    </div>
+                    <div className="border rounded-lg max-h-80 overflow-auto">
                       <table className="w-full text-xs">
-                        <thead className="bg-muted/50 sticky top-0">
+                        <thead className="bg-muted/50 sticky top-0 z-10">
                           <tr>
                             <th className="p-2 text-left border-r">Name*</th>
                             <th className="p-2 text-left border-r">Email</th>
@@ -356,14 +384,24 @@ export function BulkCustomerUpload({ onSuccess }: BulkCustomerUploadProps) {
                           </tr>
                         </thead>
                         <tbody>
-                          {customers.map((customer, index) => (
-                            <tr key={index} className="border-t hover:bg-muted/30">
+                          {customers
+                            .map((customer, index) => ({ customer, index }))
+                            .filter(({ index }) => !showErrorsOnly || rowErrors.has(index))
+                            .map(({ customer, index }) => (
+                            <tr 
+                              key={index} 
+                              className={`border-t hover:bg-muted/30 ${
+                                rowErrors.has(index) ? 'bg-red-50 border-red-200' : ''
+                              }`}
+                            >
                               <td className="p-1 border-r">
                                 <input
                                   type="text"
                                   value={customer.name}
                                   onChange={(e) => updateCustomer(index, 'name', e.target.value)}
-                                  className="w-full p-1 text-xs border rounded"
+                                  className={`w-full p-1 text-xs border rounded ${
+                                    !customer.name ? 'border-red-300 bg-red-50' : ''
+                                  }`}
                                   placeholder="Customer name"
                                 />
                               </td>
@@ -372,7 +410,9 @@ export function BulkCustomerUpload({ onSuccess }: BulkCustomerUploadProps) {
                                   type="email"
                                   value={customer.email || ''}
                                   onChange={(e) => updateCustomer(index, 'email', e.target.value)}
-                                  className="w-full p-1 text-xs border rounded"
+                                  className={`w-full p-1 text-xs border rounded ${
+                                    customer.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email) ? 'border-red-300 bg-red-50' : ''
+                                  }`}
                                   placeholder="Email"
                                 />
                               </td>
@@ -381,7 +421,9 @@ export function BulkCustomerUpload({ onSuccess }: BulkCustomerUploadProps) {
                                   type="text"
                                   value={customer.phone || ''}
                                   onChange={(e) => updateCustomer(index, 'phone', e.target.value)}
-                                  className="w-full p-1 text-xs border rounded"
+                                  className={`w-full p-1 text-xs border rounded ${
+                                    customer.phone && !/^\d{10}$/.test(customer.phone.replace(/\D/g, '')) ? 'border-red-300 bg-red-50' : ''
+                                  }`}
                                   placeholder="Phone"
                                 />
                               </td>
