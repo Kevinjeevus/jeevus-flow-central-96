@@ -367,22 +367,24 @@ export function InvoiceForm({ onClose, onSuccess }: InvoiceFormProps) {
       )}
       
       <Dialog open={showNewCustomerForm} onOpenChange={setShowNewCustomerForm}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
+        <DialogContent className="max-w-[95vw] h-[95vh] flex flex-col p-0">
+          <DialogHeader className="px-4 pt-4 pb-2 border-b">
             <DialogTitle>Create New Customer</DialogTitle>
           </DialogHeader>
-          <CustomerForm 
-            onClose={() => setShowNewCustomerForm(false)}
-            onSuccess={(newCustomer) => {
-              if (newCustomer) {
-                setCustomers([...customers, newCustomer]);
-                setInvoiceData({...invoiceData, customer_id: newCustomer.id});
-              }
-              setShowNewCustomerForm(false);
-              setNewCustomerName("");
-            }}
-            initialName={newCustomerName}
-          />
+          <div className="flex-1 overflow-y-auto p-4">
+            <CustomerForm 
+              onClose={() => setShowNewCustomerForm(false)}
+              onSuccess={(newCustomer) => {
+                if (newCustomer) {
+                  setCustomers([...customers, newCustomer]);
+                  setInvoiceData({...invoiceData, customer_id: newCustomer.id});
+                }
+                setShowNewCustomerForm(false);
+                setNewCustomerName("");
+              }}
+              initialName={newCustomerName}
+            />
+          </div>
         </DialogContent>
       </Dialog>
     <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6">
