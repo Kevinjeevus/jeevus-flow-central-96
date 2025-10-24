@@ -436,6 +436,9 @@ export type Database = {
           created_by: string | null
           credit_limit: number | null
           email: string | null
+          gps_last_updated: string | null
+          gps_latitude: number | null
+          gps_longitude: number | null
           gstin: string | null
           id: string
           name: string
@@ -454,6 +457,9 @@ export type Database = {
           created_by?: string | null
           credit_limit?: number | null
           email?: string | null
+          gps_last_updated?: string | null
+          gps_latitude?: number | null
+          gps_longitude?: number | null
           gstin?: string | null
           id?: string
           name: string
@@ -472,6 +478,9 @@ export type Database = {
           created_by?: string | null
           credit_limit?: number | null
           email?: string | null
+          gps_last_updated?: string | null
+          gps_latitude?: number | null
+          gps_longitude?: number | null
           gstin?: string | null
           id?: string
           name?: string
@@ -2013,14 +2022,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      is_admin: {
-        Args: { _user_id: string }
-        Returns: boolean
-      }
-      promote_user_to_admin: {
-        Args: { user_email: string }
-        Returns: string
-      }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
+      promote_user_to_admin: { Args: { user_email: string }; Returns: string }
     }
     Enums: {
       employee_sector:

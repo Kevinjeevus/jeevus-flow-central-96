@@ -253,6 +253,40 @@ export function InvoiceForm({ onClose, onSuccess }: InvoiceFormProps) {
 
     setIsLoading(true);
     try {
+      // Capture GPS location
+      let gpsLocation = null;
+      try {
+        if (navigator.geolocation) {
+          gpsLocation = await new Promise<{latitude: number, longitude: number}>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(
+              (position) => resolve({
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude
+              }),
+              (error) => {
+                console.warn("GPS location not captured:", error.message);
+                reject(error);
+              },
+              { timeout: 5000, enableHighAccuracy: true }
+            );
+          });
+        }
+      } catch (gpsError) {
+        console.warn("Could not capture GPS location:", gpsError);
+      }
+
+      // Update customer GPS location if captured
+      if (gpsLocation) {
+        await supabase
+          .from("customers")
+          .update({
+            gps_latitude: gpsLocation.latitude,
+            gps_longitude: gpsLocation.longitude,
+            gps_last_updated: new Date().toISOString()
+          })
+          .eq("id", invoiceData.customer_id);
+      }
+
       // Create invoice
       const { data: invoice, error: invoiceError } = await supabase
         .from('sales_invoices')
