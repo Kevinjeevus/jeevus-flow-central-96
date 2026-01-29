@@ -69,7 +69,8 @@ serve(async (req) => {
       sector, 
       date_of_joining, 
       salary, 
-      username 
+      username,
+      assign_role 
     } = await req.json()
 
     // Check for duplicate username before creating user
@@ -170,6 +171,19 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       )
+    }
+
+    // Assign role in user_roles table
+    const roleToAssign = assign_role || (sector === "admin" ? "admin" : sector === "hr" ? "hr" : "employee")
+    const { error: roleError } = await supabaseAdmin.from("user_roles").insert({
+      user_id: authData.user.id,
+      role: roleToAssign,
+      created_by: user.id,
+    })
+
+    if (roleError) {
+      console.error("Error assigning role:", roleError)
+      // Don't fail the whole creation if role assignment fails
     }
 
     return new Response(

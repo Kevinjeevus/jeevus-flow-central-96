@@ -22,14 +22,35 @@ export default function Index() {
 
   const fetchUserProfile = async () => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
+      // Check user_roles table first (new role-based system)
+      const { data: roleData } = await supabase
+        .from('user_roles')
         .select('role')
-        .eq('user_id', user?.id)
-        .single();
+        .eq('user_id', user?.id);
+      
+      if (roleData && roleData.length > 0) {
+        // Get the highest priority role
+        const roles = roleData.map(r => r.role);
+        if (roles.includes('admin')) {
+          setUserProfile({ role: 'admin' });
+        } else if (roles.includes('hr')) {
+          setUserProfile({ role: 'hr' });
+        } else if (roles.includes('sales')) {
+          setUserProfile({ role: 'sales' });
+        } else {
+          setUserProfile({ role: 'employee' });
+        }
+      } else {
+        // Fallback to profiles table for backward compatibility
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('user_id', user?.id)
+          .single();
 
-      if (error && error.code !== 'PGRST116') throw error;
-      setUserProfile(data);
+        if (error && error.code !== 'PGRST116') throw error;
+        setUserProfile(data);
+      }
     } catch (error: any) {
       console.error('Error fetching profile:', error);
     } finally {
@@ -47,7 +68,11 @@ export default function Index() {
       return <Navigate to="/dashboard" replace />;
     }
     
-    // Redirect to attendance page for route users
+    if (userProfile?.role === 'hr') {
+      return <Navigate to="/hr-dashboard" replace />;
+    }
+    
+    // Redirect to attendance page for other users
     return <Navigate to="/attendance" replace />;
   }
 
