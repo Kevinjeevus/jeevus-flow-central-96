@@ -51,6 +51,7 @@ import CRM from "./pages/CRM";
 import Payroll from "./pages/Payroll";
 import KevinSalesOrder from "./pages/KevinSalesOrder";
 import Offers from "./pages/Offers";
+import HRDashboard from "./pages/HRDashboard";
 
 const queryClient = new QueryClient();
 
@@ -71,6 +72,7 @@ function ProtectedRoutes() {
       <Route path="/salesman-dashboard" element={<SalesmanDashboard />} />
       <Route path="/employee-dashboard" element={<EmployeeDashboard />} />
       <Route path="/attendance-history" element={<AttendanceHistory />} />
+      <Route path="/hr-dashboard" element={<HRDashboard />} />
       
       {/* Regular ERP Routes with Layout */}
       <Route path="/dashboard" element={<ErpLayout><Dashboard /></ErpLayout>} />

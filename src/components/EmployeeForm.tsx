@@ -23,11 +23,12 @@ const employeeSchema = z.object({
   employee_id: z.string().min(1, "Employee ID is required"),
   designation: z.string().optional(),
   department: z.string().optional(),
-  sector: z.enum(["sales", "accounts", "marketing", "manufacturing", "admin"]),
+  sector: z.enum(["sales", "accounts", "marketing", "manufacturing", "admin", "hr"]),
   date_of_joining: z.date().optional(),
   salary: z.number().min(0).optional(),
   username: z.string().min(3, "Username must be at least 3 characters"),
   password: z.string().min(6, "Password must be at least 6 characters"),
+  assign_role: z.enum(["employee", "hr", "sales", "admin"]).optional(),
 });
 
 type EmployeeFormData = z.infer<typeof employeeSchema>;
@@ -56,6 +57,7 @@ export function EmployeeForm({ employee, onSuccess }: EmployeeFormProps) {
       salary: employee?.salary || 0,
       username: employee?.username || "",
       password: "",
+      assign_role: "employee",
     },
   });
 
@@ -105,6 +107,7 @@ export function EmployeeForm({ employee, onSuccess }: EmployeeFormProps) {
             date_of_joining: data.date_of_joining ? format(data.date_of_joining, "yyyy-MM-dd") : null,
             salary: data.salary,
             username: data.username,
+            assign_role: data.assign_role || "employee",
           },
           headers: {
             Authorization: `Bearer ${session.access_token}`,
@@ -255,12 +258,39 @@ export function EmployeeForm({ employee, onSuccess }: EmployeeFormProps) {
                         <SelectItem value="marketing">Marketing</SelectItem>
                         <SelectItem value="manufacturing">Manufacturing</SelectItem>
                         <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="hr">HR</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
+              {!isEditing && (
+                <FormField
+                  control={form.control}
+                  name="assign_role"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Assign Role</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select role" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="employee">Employee</SelectItem>
+                          <SelectItem value="sales">Sales</SelectItem>
+                          <SelectItem value="hr">HR</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <FormField
                 control={form.control}
