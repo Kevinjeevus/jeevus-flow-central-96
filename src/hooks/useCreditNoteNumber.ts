@@ -29,7 +29,7 @@ export function useCreditNoteNumber() {
       const next = (count || 0) + 1;
       const padded = next.toString().padStart(2, "0");
       const prefix = prefixData?.credit_note_prefix || "CN/";
-      const fy = prefixData?.financial_year || "2025-26";
+      const fy = prefixData?.financial_year || "25-26";
 
       setCreditNoteNumber(`${prefix}${fy}/${padded}`);
     } catch (e) {

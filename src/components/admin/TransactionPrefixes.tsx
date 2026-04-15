@@ -145,9 +145,9 @@ export function TransactionPrefixes() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="2024-25">2024-25</SelectItem>
-            <SelectItem value="2025-26">2025-26</SelectItem>
-            <SelectItem value="2026-27">2026-27</SelectItem>
+            <SelectItem value="24-25">24-25</SelectItem>
+            <SelectItem value="25-26">25-26</SelectItem>
+            <SelectItem value="26-27">26-27</SelectItem>
           </SelectContent>
         </Select>
       </div>

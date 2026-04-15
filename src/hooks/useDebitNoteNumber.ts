@@ -29,7 +29,7 @@ export function useDebitNoteNumber() {
       const next = (count || 0) + 1;
       const padded = next.toString().padStart(2, "0");
       const prefix = prefixData?.purchase_return_prefix || "DN/";
-      const fy = prefixData?.financial_year || "2025-26";
+      const fy = prefixData?.financial_year || "25-26";
 
       setDebitNoteNumber(`${prefix}${fy}/${padded}`);
     } catch (e) {
