@@ -32,7 +32,7 @@ export function useInvoiceNumber() {
       const paddedNumber = nextNumber.toString().padStart(2, '0');
       
       const prefix = prefixData?.sale_prefix || 'INV/';
-      const financialYear = prefixData?.financial_year || '2025-26';
+      const financialYear = prefixData?.financial_year || '25-26';
       
       const generatedNumber = `${prefix}${financialYear}/${paddedNumber}`;
       setInvoiceNumber(generatedNumber);

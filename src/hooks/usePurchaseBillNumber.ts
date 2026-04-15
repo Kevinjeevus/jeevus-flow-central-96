@@ -24,7 +24,7 @@ export function usePurchaseBillNumber() {
       const next = (count || 0) + 1;
       const padded = next.toString().padStart(2, "0");
       const prefix = prefixData?.purchase_bill_prefix || "PB/";
-      const fy = prefixData?.financial_year || "2025-26";
+      const fy = prefixData?.financial_year || "25-26";
       setBillNumber(`${prefix}${fy}/${padded}`);
     } catch (e) {
       console.error("Error generating purchase bill number:", e);
