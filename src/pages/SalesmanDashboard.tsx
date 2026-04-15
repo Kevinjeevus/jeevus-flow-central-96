@@ -48,6 +48,12 @@ export default function SalesmanDashboard() {
   const [attendance, setAttendance] = useState<any>(null);
   const { toast } = useToast();
 
+  useEffect(() => {
+    if (user) {
+      checkAttendanceFirst();
+    }
+  }, [user]);
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
@@ -55,10 +61,6 @@ export default function SalesmanDashboard() {
   if (!user) {
     return <Navigate to="/employee-auth" replace />;
   }
-
-  useEffect(() => {
-    checkAttendanceFirst();
-  }, [user]);
 
   const checkAttendanceFirst = async () => {
     if (!user) return;
