@@ -29,7 +29,7 @@ interface PreviousSession {
 }
 
 export default function AttendanceLogin() {
-  const { user, loading } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [routes, setRoutes] = useState<Route[]>([]);
@@ -193,13 +193,13 @@ export default function AttendanceLogin() {
           .eq('id', activeSession.id);
       }
 
-      // Sign out from Supabase
-      await supabase.auth.signOut();
+      await signOut();
       
       toast({
         title: "Success",
         description: "Logged out successfully!",
       });
+      navigate('/');
     } catch (error: any) {
       toast({
         title: "Error",

@@ -35,7 +35,7 @@ interface TodaySalesOrder {
 }
 
 export default function EmployeeDashboard() {
-  const { user, loading } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats>({
@@ -189,11 +189,12 @@ export default function EmployeeDashboard() {
           .eq('id', attendanceInfo.sessionId);
       }
 
-      await supabase.auth.signOut();
+      await signOut();
       toast({
         title: "Success",
         description: "Logged out successfully!",
       });
+      navigate('/');
     } catch (error: any) {
       toast({
         title: "Error",

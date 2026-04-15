@@ -34,7 +34,7 @@ interface DashboardStats {
 }
 
 export default function SalesmanDashboard() {
-  const { user, loading } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats>({
     todaySales: 0,
@@ -48,6 +48,12 @@ export default function SalesmanDashboard() {
   const [attendance, setAttendance] = useState<any>(null);
   const { toast } = useToast();
 
+  useEffect(() => {
+    if (user) {
+      checkAttendanceFirst();
+    }
+  }, [user]);
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
@@ -55,10 +61,6 @@ export default function SalesmanDashboard() {
   if (!user) {
     return <Navigate to="/employee-auth" replace />;
   }
-
-  useEffect(() => {
-    checkAttendanceFirst();
-  }, [user]);
 
   const checkAttendanceFirst = async () => {
     if (!user) return;
@@ -144,12 +146,13 @@ export default function SalesmanDashboard() {
           .eq("id", attendance.id);
       }
 
-      await supabase.auth.signOut();
+      await signOut();
       
       toast({
         title: "Success",
         description: "Logged out successfully!",
       });
+      navigate('/');
     } catch (error: any) {
       toast({
         title: "Error",
