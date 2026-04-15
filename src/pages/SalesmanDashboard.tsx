@@ -34,7 +34,7 @@ interface DashboardStats {
 }
 
 export default function SalesmanDashboard() {
-  const { user, loading } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats>({
     todaySales: 0,
@@ -144,12 +144,13 @@ export default function SalesmanDashboard() {
           .eq("id", attendance.id);
       }
 
-      await supabase.auth.signOut();
+      await signOut();
       
       toast({
         title: "Success",
         description: "Logged out successfully!",
       });
+      navigate('/');
     } catch (error: any) {
       toast({
         title: "Error",
