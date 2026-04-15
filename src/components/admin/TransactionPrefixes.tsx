@@ -36,7 +36,7 @@ export function TransactionPrefixes() {
     proforma_invoice_prefix: "",
     delivery_challan_prefix: "",
     payment_in_prefix: "",
-    financial_year: "2025-26"
+    financial_year: "25-26"
   });
 
   useEffect(() => {
