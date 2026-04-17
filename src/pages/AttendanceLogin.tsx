@@ -57,7 +57,7 @@ export default function AttendanceLogin() {
     }
   };
 
-  const checkActiveSession = async () => {
+  async function checkActiveSession() {
     try {
       const today = new Date().toISOString().split('T')[0];
       const { data, error } = await supabase
@@ -84,7 +84,7 @@ export default function AttendanceLogin() {
     }
   };
 
-  const fetchPreviousSession = async () => {
+  async function fetchPreviousSession() {
     try {
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
@@ -120,7 +120,22 @@ export default function AttendanceLogin() {
     }
   };
 
-  const handleMarkAttendance = async () => {
+  useEffect(() => {
+    if (user) {
+      fetchRoutes();
+      checkActiveSession();
+      fetchPreviousSession();
+    }
+  }, [user]);
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
     if (!selectedRoute) {
       toast({
         title: "Error",
