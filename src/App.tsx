@@ -53,6 +53,7 @@ import KevinSalesOrder from "./pages/KevinSalesOrder";
 import Offers from "./pages/Offers";
 import HRDashboard from "./pages/HRDashboard";
 import Payments from "./pages/Payments";
+import Reports from "./pages/Reports";
 
 const queryClient = new QueryClient();
 
@@ -106,6 +107,7 @@ function ProtectedRoutes() {
       <Route path="/accounts" element={<ErpLayout><Accounts /></ErpLayout>} />
       <Route path="/bank-analysis" element={<ErpLayout><BankAnalysis /></ErpLayout>} />
       <Route path="/finance-reports" element={<ErpLayout><FinanceReports /></ErpLayout>} />
+      <Route path="/reports" element={<ErpLayout><Reports /></ErpLayout>} />
       <Route path="/money/bank-accounts" element={<ErpLayout><BankAccounts /></ErpLayout>} />
       <Route path="/money/cash-in-hand" element={<ErpLayout><CashInHand /></ErpLayout>} />
       <Route path="/money/cheques" element={<ErpLayout><Cheques /></ErpLayout>} />
