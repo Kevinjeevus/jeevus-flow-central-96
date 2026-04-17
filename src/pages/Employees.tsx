@@ -91,19 +91,19 @@ export default function Employees() {
   };
 
   const handleDeleteEmployee = async (employeeId: string) => {
-    if (!window.confirm("Are you sure you want to deactivate this employee?")) return;
+    if (!window.confirm("Are you sure you want to permanently delete this employee? This cannot be undone.")) return;
     
     try {
       const { error } = await supabase
         .from("employees")
-        .update({ is_active: false })
+        .delete()
         .eq("id", employeeId);
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: "Employee deactivated successfully",
+        description: "Employee deleted successfully",
       });
       
       fetchEmployees();
