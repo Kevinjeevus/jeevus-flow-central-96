@@ -136,6 +136,7 @@ export default function AttendanceLogin() {
     return <Navigate to="/auth" replace />;
   }
 
+  const handleMarkAttendance = async () => {
     if (!selectedRoute) {
       toast({
         title: "Error",
