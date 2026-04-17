@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { ErpLayout } from "@/components/ErpLayout";
+
 import { BulkCustomerUpload } from "@/components/BulkCustomerUpload";
 
 interface Customer {
@@ -238,7 +238,6 @@ export default function Customers() {
   const activeCustomers = customers.filter(c => c.status === 'active').length;
 
   return (
-    <ErpLayout>
       <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
         <div>
@@ -678,6 +677,5 @@ export default function Customers() {
         </DialogContent>
       </Dialog>
       </div>
-    </ErpLayout>
   );
 }

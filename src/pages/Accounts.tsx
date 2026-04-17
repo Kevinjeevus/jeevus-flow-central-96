@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ErpLayout } from "@/components/ErpLayout";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -72,7 +72,6 @@ export default function Accounts() {
   };
 
   return (
-    <ErpLayout>
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -238,6 +237,5 @@ export default function Accounts() {
           />
         )}
       </div>
-    </ErpLayout>
   );
 }

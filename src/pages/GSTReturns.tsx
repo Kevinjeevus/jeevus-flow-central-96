@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ErpLayout } from "@/components/ErpLayout";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, FileText, Calendar, AlertCircle, CheckCircle } from "lucide-react";
@@ -63,7 +63,6 @@ export default function GSTReturns() {
   };
 
   return (
-    <ErpLayout>
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -197,6 +196,5 @@ export default function GSTReturns() {
           gstrType={activeTab as any}
         />
       </div>
-    </ErpLayout>
   );
 }
