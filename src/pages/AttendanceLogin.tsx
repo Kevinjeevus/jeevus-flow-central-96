@@ -38,25 +38,7 @@ export default function AttendanceLogin() {
   const [previousSession, setPreviousSession] = useState<PreviousSession | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // All hooks must be called before any early returns
-  useEffect(() => {
-    if (user) {
-      fetchRoutes();
-      checkActiveSession();
-      fetchPreviousSession();
-    }
-  }, [user]);
-
-  // Early returns AFTER all hooks
-  if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
-  }
-
-  if (!user) {
-    return <Navigate to="/auth" replace />;
-  }
-
-  const fetchRoutes = async () => {
+  async function fetchRoutes() {
     try {
       const { data, error } = await supabase
         .from('routes')
