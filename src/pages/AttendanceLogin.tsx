@@ -38,25 +38,7 @@ export default function AttendanceLogin() {
   const [previousSession, setPreviousSession] = useState<PreviousSession | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // All hooks must be called before any early returns
-  useEffect(() => {
-    if (user) {
-      fetchRoutes();
-      checkActiveSession();
-      fetchPreviousSession();
-    }
-  }, [user]);
-
-  // Early returns AFTER all hooks
-  if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
-  }
-
-  if (!user) {
-    return <Navigate to="/auth" replace />;
-  }
-
-  const fetchRoutes = async () => {
+  async function fetchRoutes() {
     try {
       const { data, error } = await supabase
         .from('routes')
@@ -75,7 +57,7 @@ export default function AttendanceLogin() {
     }
   };
 
-  const checkActiveSession = async () => {
+  async function checkActiveSession() {
     try {
       const today = new Date().toISOString().split('T')[0];
       const { data, error } = await supabase
@@ -102,7 +84,7 @@ export default function AttendanceLogin() {
     }
   };
 
-  const fetchPreviousSession = async () => {
+  async function fetchPreviousSession() {
     try {
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
@@ -137,6 +119,22 @@ export default function AttendanceLogin() {
       console.error('Error fetching previous session:', error);
     }
   };
+
+  useEffect(() => {
+    if (user) {
+      fetchRoutes();
+      checkActiveSession();
+      fetchPreviousSession();
+    }
+  }, [user]);
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
 
   const handleMarkAttendance = async () => {
     if (!selectedRoute) {
