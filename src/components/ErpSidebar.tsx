@@ -132,7 +132,7 @@ const menuItems = [
     children: [
       { title: "Finance", url: "/finance", icon: DollarSign },
       { title: "Accounts", url: "/accounts", icon: CreditCard },
-      { title: "Payments", url: "/payment-in", icon: Receipt },
+      { title: "Payments", url: "/payments", icon: Receipt },
       { title: "GST", url: "/gst", icon: Percent },
       { title: "Bank Analysis", url: "/bank-analysis", icon: TrendingDown },
       { title: "Reports", url: "/reports", icon: BarChart3 },
