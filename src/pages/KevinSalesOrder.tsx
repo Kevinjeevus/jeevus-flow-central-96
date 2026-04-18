@@ -286,11 +286,6 @@ export default function KevinSalesOrder() {
     } else {
       setCart([...cart, { product, quantity: 1 }]);
     }
-
-    toast({
-      title: "Added to cart",
-      description: `${product.name} added to cart`,
-    });
   };
 
   const updateQuantity = (productId: string, newQuantity: number) => {
@@ -713,38 +708,40 @@ export default function KevinSalesOrder() {
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        {cart.map((item) => (
-                          <div key={item.product.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm truncate">{item.product.name}</p>
-                              <p className="text-xs text-muted-foreground">₹{item.product.sale_price} each</p>
+                        <div className="max-h-[320px] overflow-y-auto pr-1 space-y-3">
+                          {cart.map((item) => (
+                            <div key={item.product.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-sm truncate">{item.product.name}</p>
+                                <p className="text-xs text-muted-foreground">₹{item.product.sale_price} each</p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                                >
+                                  <Minus className="h-3 w-3" />
+                                </Button>
+                                <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                                >
+                                  <Plus className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => removeFromCart(item.product.id)}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                              >
-                                <Minus className="h-3 w-3" />
-                              </Button>
-                              <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                              >
-                                <Plus className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => removeFromCart(item.product.id)}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
 
                         {/* Cart Summary */}
                         <div className="border-t pt-3 space-y-2">
