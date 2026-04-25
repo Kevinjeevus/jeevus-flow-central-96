@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,72 +29,108 @@ interface BankAccountFormData {
 
 interface BankAccountFormProps {
   onClose: () => void;
+  account?: any;
 }
 
-export function BankAccountForm({ onClose }: BankAccountFormProps) {
-  const [asOfDate, setAsOfDate] = useState<Date>(new Date());
+export function BankAccountForm({ onClose, account }: BankAccountFormProps) {
+  const isEdit = !!account?.id;
+  const [asOfDate, setAsOfDate] = useState<Date>(
+    account?.as_of_date ? new Date(account.as_of_date) : new Date()
+  );
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<BankAccountFormData>({
+  const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<BankAccountFormData>({
     defaultValues: {
-      opening_balance: 0,
-      print_upi_qr_code: true,
-      print_bank_details: true,
+      account_name: account?.account_name || "",
+      opening_balance: account?.opening_balance ?? 0,
+      account_number: account?.account_number || "",
+      ifsc_code: account?.ifsc_code || "",
+      upi_id: account?.upi_id || "",
+      bank_name: account?.bank_name || "",
+      account_holder_name: account?.account_holder_name || "",
+      print_upi_qr_code: account?.print_upi_qr_code ?? true,
+      print_bank_details: account?.print_bank_details ?? true,
     }
   });
 
-  const createMutation = useMutation({
+  useEffect(() => {
+    if (account) {
+      reset({
+        account_name: account.account_name || "",
+        opening_balance: account.opening_balance ?? 0,
+        account_number: account.account_number || "",
+        ifsc_code: account.ifsc_code || "",
+        upi_id: account.upi_id || "",
+        bank_name: account.bank_name || "",
+        account_holder_name: account.account_holder_name || "",
+        print_upi_qr_code: account.print_upi_qr_code ?? true,
+        print_bank_details: account.print_bank_details ?? true,
+      } as any);
+      if (account.as_of_date) setAsOfDate(new Date(account.as_of_date));
+    }
+  }, [account, reset]);
+
+  const saveMutation = useMutation({
     mutationFn: async (data: BankAccountFormData) => {
-      // Generate account code for bank account
-      const accountCode = `BA-${Date.now()}`;
-      
-      const { error } = await supabase
-        .from("accounts")
-        .insert({
-          account_name: data.account_name,
-          account_code: accountCode,
-          account_type: "assets",
-          opening_balance: data.opening_balance,
-          current_balance: data.opening_balance,
-          account_number: data.account_number,
-          ifsc_code: data.ifsc_code,
-          upi_id: data.upi_id,
-          bank_name: data.bank_name,
-          account_holder_name: data.account_holder_name,
-          print_upi_qr_code: data.print_upi_qr_code,
-          print_bank_details: data.print_bank_details,
-          as_of_date: data.as_of_date.toISOString().split('T')[0],
-        });
-      
-      if (error) throw error;
+      const payload = {
+        account_name: data.account_name,
+        account_number: data.account_number,
+        ifsc_code: data.ifsc_code,
+        upi_id: data.upi_id,
+        bank_name: data.bank_name,
+        account_holder_name: data.account_holder_name,
+        print_upi_qr_code: data.print_upi_qr_code,
+        print_bank_details: data.print_bank_details,
+        as_of_date: data.as_of_date.toISOString().split('T')[0],
+        opening_balance: data.opening_balance,
+      };
+
+      if (isEdit) {
+        const { error } = await supabase
+          .from("accounts")
+          .update(payload)
+          .eq("id", account.id);
+        if (error) throw error;
+      } else {
+        const accountCode = `BA-${Date.now()}`;
+        const { error } = await supabase
+          .from("accounts")
+          .insert({
+            ...payload,
+            account_code: accountCode,
+            account_type: "assets",
+            current_balance: data.opening_balance,
+          });
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bank-accounts"] });
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       toast({
         title: "Success",
-        description: "Bank account created successfully",
+        description: `Bank account ${isEdit ? "updated" : "created"} successfully`,
       });
       onClose();
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to create bank account",
+        description: `Failed to ${isEdit ? "update" : "create"} bank account`,
         variant: "destructive",
       });
     },
   });
 
   const onSubmit = (data: BankAccountFormData) => {
-    createMutation.mutate({ ...data, as_of_date: asOfDate });
+    saveMutation.mutate({ ...data, as_of_date: asOfDate });
   };
 
   return (
-    <Card className="w-full max-w-4xl">
+    <Card className="w-full max-w-4xl border-0 shadow-none">
       <CardHeader>
-        <CardTitle>Add Bank Account</CardTitle>
+        <CardTitle>{isEdit ? "Edit Bank Account" : "Add Bank Account"}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -126,6 +162,7 @@ export function BankAccountForm({ onClose }: BankAccountFormProps) {
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
+                    type="button"
                     variant="outline"
                     className={cn(
                       "w-full justify-start text-left font-normal",
@@ -153,18 +190,16 @@ export function BankAccountForm({ onClose }: BankAccountFormProps) {
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="print_upi_qr_code"
-                {...register("print_upi_qr_code")}
+                checked={!!watch("print_upi_qr_code")}
                 onCheckedChange={(checked) => setValue("print_upi_qr_code", !!checked)}
-                defaultChecked={true}
               />
               <Label htmlFor="print_upi_qr_code">Print UPI QR Code on Invoices</Label>
             </div>
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="print_bank_details"
-                {...register("print_bank_details")}
+                checked={!!watch("print_bank_details")}
                 onCheckedChange={(checked) => setValue("print_bank_details", !!checked)}
-                defaultChecked={true}
               />
               <Label htmlFor="print_bank_details">Print bank details on invoices</Label>
             </div>
@@ -225,8 +260,8 @@ export function BankAccountForm({ onClose }: BankAccountFormProps) {
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={createMutation.isPending}>
-              {createMutation.isPending ? "Creating..." : "Save"}
+            <Button type="submit" disabled={saveMutation.isPending}>
+              {saveMutation.isPending ? (isEdit ? "Updating..." : "Creating...") : (isEdit ? "Update" : "Save")}
             </Button>
           </div>
         </form>
