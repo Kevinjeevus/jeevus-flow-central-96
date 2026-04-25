@@ -155,7 +155,29 @@ export function TransactionPrefixes() {
         </Select>
       </div>
 
-      {/* Prefixes */}
+      {/* Number Padding (zeros) */}
+      <div className="space-y-2">
+        <Label htmlFor="number-padding">Number Padding (zeros)</Label>
+        <Select
+          value={String(padding)}
+          onValueChange={(v) => setPadding(parseInt(v, 10))}
+        >
+          <SelectTrigger id="number-padding">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {[1, 2, 3, 4, 5, 6].map((n) => (
+              <SelectItem key={n} value={String(n)}>
+                {n} digit{n > 1 ? "s" : ""} ({"0".repeat(n)} → {"0".repeat(n - 1)}1)
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          Controls how many digits the running number is padded to. E.g. padding 3 → INV/{prefixes.financial_year}/001
+        </p>
+      </div>
+
       <div className="border rounded-lg p-4">
         <h3 className="text-lg font-semibold mb-4 text-foreground">Prefixes</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
