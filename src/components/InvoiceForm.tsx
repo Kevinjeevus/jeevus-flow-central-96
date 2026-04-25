@@ -214,10 +214,10 @@ export function InvoiceForm({ onClose, onSuccess, invoiceId }: InvoiceFormProps)
         .select('id, route_id')
         .eq('user_id', user?.id)
         .eq('status', 'active')
-        .maybeSingle();
+        .limit(1);
 
-      if (error && error.code !== 'PGRST116') throw error;
-      setActiveSession(data);
+      if (error) throw error;
+      setActiveSession(data && data.length > 0 ? data[0] : null);
     } catch (error: any) {
       console.error('Error checking active session:', error);
     }
@@ -355,11 +355,10 @@ export function InvoiceForm({ onClose, onSuccess, invoiceId }: InvoiceFormProps)
             status,
           })
           .eq('id', invoiceId)
-          .select()
-          .maybeSingle();
+          .select();
         if (updateError) throw updateError;
-        if (!updated) throw new Error("Invoice not found or could not be updated");
-        invoice = updated;
+        if (!updated || updated.length === 0) throw new Error("Invoice not found or you don't have permission to update it");
+        invoice = updated[0];
 
         // Replace items
         const { error: delError } = await supabase
@@ -368,7 +367,7 @@ export function InvoiceForm({ onClose, onSuccess, invoiceId }: InvoiceFormProps)
           .eq('sales_invoice_id', invoiceId);
         if (delError) throw delError;
       } else {
-        const { data: created, error: invoiceError } = await supabase
+        const { data: created, error: insertError } = await supabase
           .from('sales_invoices')
           .insert({
             customer_id: invoiceData.customer_id,
@@ -387,11 +386,10 @@ export function InvoiceForm({ onClose, onSuccess, invoiceId }: InvoiceFormProps)
             cheque_id: invoiceData.cheque_id || null,
             status
           })
-          .select()
-          .maybeSingle();
-        if (invoiceError) throw invoiceError;
-        if (!created) throw new Error("Failed to create invoice record");
-        invoice = created;
+          .select();
+        if (insertError) throw insertError;
+        if (!created || created.length === 0) throw new Error("Failed to create invoice record");
+        invoice = created[0];
       }
 
       // Create invoice items

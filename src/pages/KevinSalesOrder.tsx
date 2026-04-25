@@ -207,22 +207,21 @@ export default function KevinSalesOrder() {
 
   const fetchFullInvoiceData = async (invoiceId: string) => {
     try {
-      // Fetch invoice with customer and items
-      const { data: invoiceData, error: invoiceError } = await supabase
+      const { data: rawInvoiceData, error: invoiceError } = await supabase
         .from("sales_invoices")
         .select(`
           *,
-          customer:customers(*),
-          sales_invoice_items(
-            *,
-            product:products(*)
+          customers (name, email, phone, address, gstin),
+          sales_invoice_items (
+            *, 
+            products (name)
           )
         `)
         .eq("id", invoiceId)
-        .maybeSingle();
+        .limit(1);
 
       if (invoiceError) throw invoiceError;
-      if (!invoiceData) {
+      if (!rawInvoiceData || rawInvoiceData.length === 0) {
         toast({
           title: "Error",
           description: "Invoice not found",
@@ -230,6 +229,7 @@ export default function KevinSalesOrder() {
         });
         return;
       }
+      const invoiceData = rawInvoiceData[0];
 
       // Fetch payment account details if available
       let bankAccount = null;
@@ -379,14 +379,14 @@ export default function KevinSalesOrder() {
           notes,
           created_by: user?.id,
         })
-        .select()
-        .maybeSingle();
+        .select();
 
       if (orderError) throw orderError;
-      if (!orderData) throw new Error("Failed to create order record");
+      if (!orderData || orderData.length === 0) throw new Error("Failed to create order record");
+      const order = orderData[0];
 
       const orderItems = cart.map(item => ({
-        sales_order_id: orderData.id,
+        sales_order_id: order.id,
         product_id: item.product.id,
         quantity: item.quantity,
         unit_price: item.product.sale_price,
@@ -434,11 +434,10 @@ export default function KevinSalesOrder() {
           notes: editingInvoice.notes,
         })
         .eq("id", editingInvoice.id)
-        .select()
-        .maybeSingle();
+        .select();
 
       if (error) throw error;
-      if (!data) throw new Error("Invoice not found or no changes made");
+      if (!data || data.length === 0) throw new Error("Invoice not found or you don't have permission to update it");
 
       toast({
         title: "Invoice Updated",
@@ -500,14 +499,14 @@ export default function KevinSalesOrder() {
       const { data: invoiceResult, error: invoiceError } = await supabase
         .from("sales_invoices")
         .insert(invoiceData)
-        .select()
-        .maybeSingle();
+        .select();
 
       if (invoiceError) throw invoiceError;
-      if (!invoiceResult) throw new Error("Failed to create invoice record");
+      if (!invoiceResult || invoiceResult.length === 0) throw new Error("Failed to create invoice record");
+      const invoice = invoiceResult[0];
 
       const invoiceItems = cart.map(item => ({
-        sales_invoice_id: invoiceResult.id,
+        sales_invoice_id: invoice.id,
         product_id: item.product.id,
         quantity: item.quantity,
         unit_price: item.product.sale_price,
