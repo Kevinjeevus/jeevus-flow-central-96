@@ -109,8 +109,9 @@ export function InvoiceForm({ onClose, onSuccess, invoiceId }: InvoiceFormProps)
           .from('sales_invoices')
           .select('*, sales_invoice_items(*, products(name, sale_price, sku, gst_rate))')
           .eq('id', invoiceId)
-          .single();
+          .maybeSingle();
         if (error) throw error;
+        if (!data) throw new Error("Invoice not found");
         setInvoiceData({
           customer_id: data.customer_id || "",
           invoiceNumber: data.invoice_number || "",
@@ -213,7 +214,7 @@ export function InvoiceForm({ onClose, onSuccess, invoiceId }: InvoiceFormProps)
         .select('id, route_id')
         .eq('user_id', user?.id)
         .eq('status', 'active')
-        .single();
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') throw error;
       setActiveSession(data);
@@ -420,9 +421,10 @@ export function InvoiceForm({ onClose, onSuccess, invoiceId }: InvoiceFormProps)
           )
         `)
         .eq('id', invoice.id)
-        .single();
+        .maybeSingle();
 
       if (fetchError) throw fetchError;
+      if (!completeInvoice) throw new Error("Invoice details not found");
 
       // Format data for preview
       const invoiceForPreview = {

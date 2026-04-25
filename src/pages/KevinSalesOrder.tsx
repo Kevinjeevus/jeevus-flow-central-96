@@ -380,9 +380,10 @@ export default function KevinSalesOrder() {
           created_by: user?.id,
         })
         .select()
-        .single();
+        .maybeSingle();
 
       if (orderError) throw orderError;
+      if (!orderData) throw new Error("Failed to create order record");
 
       const orderItems = cart.map(item => ({
         sales_order_id: orderData.id,
@@ -996,6 +997,9 @@ export default function KevinSalesOrder() {
         {/* Customer Form Dialog */}
         <Dialog open={showCustomerForm} onOpenChange={setShowCustomerForm}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Add New Customer</DialogTitle>
+            </DialogHeader>
             <CustomerForm
               onClose={() => setShowCustomerForm(false)}
               onSuccess={(customer) => {

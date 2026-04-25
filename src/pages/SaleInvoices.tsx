@@ -96,7 +96,7 @@ export default function SaleInvoices() {
         .from("profiles")
         .select("role")
         .eq("user_id", user?.id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       setUserProfile(data);
@@ -252,9 +252,13 @@ export default function SaleInvoices() {
           )
         `)
         .eq('id', invoiceId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) {
+        toast({ title: "Error", description: "Invoice not found", variant: "destructive" });
+        return;
+      }
 
       // Fetch bank account details if payment_account_id exists
       let bankAccount = null;
@@ -263,7 +267,7 @@ export default function SaleInvoices() {
           .from('accounts')
           .select('account_name, account_number, bank_name, ifsc_code, account_holder_name')
           .eq('id', data.payment_account_id)
-          .single();
+          .maybeSingle();
         bankAccount = accountData;
       }
 
@@ -387,6 +391,9 @@ export default function SaleInvoices() {
       {/* Edit Invoice Dialog */}
       <Dialog open={!!editInvoiceId} onOpenChange={(open) => !open && setEditInvoiceId(null)}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Edit Invoice</DialogTitle>
+          </DialogHeader>
           {editInvoiceId && (
             <InvoiceForm
               invoiceId={editInvoiceId}
@@ -452,6 +459,9 @@ export default function SaleInvoices() {
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader className="sr-only">
+                      <DialogTitle>Create New Invoice</DialogTitle>
+                    </DialogHeader>
                     <InvoiceForm
                       onSuccess={() => {
                         setIsInvoiceDialogOpen(false);
@@ -588,6 +598,9 @@ export default function SaleInvoices() {
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader className="sr-only">
+                      <DialogTitle>Create New Customer</DialogTitle>
+                    </DialogHeader>
                     <CustomerForm
                       onSuccess={() => {
                         setIsCustomerDialogOpen(false);
@@ -655,6 +668,9 @@ export default function SaleInvoices() {
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-hidden p-0">
+                      <DialogHeader className="sr-only">
+                        <DialogTitle>Create New Invoice</DialogTitle>
+                      </DialogHeader>
                       <div className="overflow-y-auto max-h-[95vh] p-6">
                         <InvoiceForm
                           onSuccess={() => {
@@ -791,6 +807,9 @@ export default function SaleInvoices() {
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-[95vw] h-[95vh] flex flex-col p-0">
+                      <DialogHeader className="sr-only">
+                        <DialogTitle>Create New Customer</DialogTitle>
+                      </DialogHeader>
                       <div className="flex-1 overflow-y-auto p-4 sm:p-6">
                         <CustomerForm
                           onSuccess={() => {
