@@ -5,6 +5,7 @@ import { ArrowLeft, Menu } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { PWAInstallPrompt } from "./PWAInstallPrompt";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { RealtimeStatusIndicator } from "@/components/RealtimeStatusIndicator";
 
 interface ErpLayoutProps {
   children: React.ReactNode;
@@ -36,6 +37,9 @@ export function ErpLayout({ children }: ErpLayoutProps) {
                   <span className="hidden sm:inline">Back</span>
                 </Button>
               )}
+              <div className="ml-auto">
+                <RealtimeStatusIndicator />
+              </div>
             </div>
           </header>
           <main className="flex-1 bg-muted/30 overflow-x-hidden">

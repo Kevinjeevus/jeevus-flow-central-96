@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { RealtimeProvider } from "@/components/RealtimeProvider";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ErpLayout } from "./components/ErpLayout";
 import { AuthProvider, useAuth } from "./components/auth/AuthProvider";
@@ -55,7 +56,21 @@ import HRDashboard from "./pages/HRDashboard";
 import Payments from "./pages/Payments";
 import Reports from "./pages/Reports";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30 * 1000,           // 30 seconds before data is considered stale
+      gcTime: 10 * 60 * 1000,         // 10 minutes cache garbage collection
+      refetchOnWindowFocus: true,      // Refetch when user returns to tab
+      refetchOnReconnect: true,        // Refetch on network reconnect
+      retry: 2,                        // Retry failed requests twice
+      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000),
+    },
+    mutations: {
+      retry: 1,
+    },
+  },
+});
 
 function ProtectedRoutes() {
   const { user, loading } = useAuth();
@@ -122,6 +137,7 @@ function ProtectedRoutes() {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
+    <RealtimeProvider>
     <TooltipProvider>
       <Toaster />
       <Sonner />
@@ -139,6 +155,7 @@ const App = () => (
         </BrowserRouter>
       </AuthProvider>
     </TooltipProvider>
+    </RealtimeProvider>
   </QueryClientProvider>
 );
 
