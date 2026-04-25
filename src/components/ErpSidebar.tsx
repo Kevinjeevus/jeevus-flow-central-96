@@ -164,15 +164,21 @@ const menuItems = [
 ];
 
 export function ErpSidebar() {
-  const { state } = useSidebar();
-  const collapsed = state === "collapsed";
+  const { state, isMobile, setOpenMobile } = useSidebar();
+  const collapsed = state === "collapsed" && !isMobile;
   const location = useLocation();
   const navigate = useNavigate();
   const currentPath = location.pathname;
 
   const handleLogout = async () => {
+    if (isMobile) setOpenMobile(false);
     await supabase.auth.signOut();
     navigate("/auth");
+  };
+
+  // Auto-close mobile sidebar on navigation
+  const handleMobileClose = () => {
+    if (isMobile) setOpenMobile(false);
   };
   
   // Initialize open groups - expand groups that contain the current route
@@ -207,7 +213,7 @@ export function ErpSidebar() {
     <Sidebar className={cn("border-r", collapsed ? "w-14" : "w-60")} collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-2 px-4 py-4">
-          <div className="flex h-8 w-8 items-center justify-center rounded bg-gradient-primary text-white font-bold text-sm">
+          <div className="flex h-8 w-8 items-center justify-center rounded bg-gradient-primary text-white font-bold text-sm shrink-0">
             J
           </div>
           {!collapsed && (
@@ -244,7 +250,7 @@ export function ErpSidebar() {
                         <div className="ml-6 space-y-1">
                           {item.children.map((child) => (
                             <SidebarMenuButton key={child.title} asChild size="sm">
-                              <NavLink to={child.url} className={getNavCls}>
+                              <NavLink to={child.url} className={getNavCls} onClick={handleMobileClose}>
                                 <child.icon className="h-4 w-4" />
                                 <span>{child.title}</span>
                               </NavLink>
@@ -261,7 +267,7 @@ export function ErpSidebar() {
             return (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton asChild>
-                  <NavLink to={item.url} className={getNavCls}>
+                  <NavLink to={item.url} className={getNavCls} onClick={handleMobileClose}>
                     <item.icon className="h-4 w-4" />
                     {!collapsed && <span>{item.title}</span>}
                   </NavLink>
@@ -272,7 +278,7 @@ export function ErpSidebar() {
         </SidebarMenu>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border p-2">
+      <SidebarFooter className="border-t border-sidebar-border p-2 safe-bottom">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
