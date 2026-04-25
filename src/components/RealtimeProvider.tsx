@@ -14,6 +14,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { cacheManager } from '@/lib/realtime-cache';
+import { useToast } from '@/hooks/use-toast';
 
 // Map of table names to the React Query keys they should invalidate
 const TABLE_QUERY_MAP: Record<string, string[][]> = {
@@ -93,6 +94,7 @@ interface RealtimeProviderProps {
 
 export function RealtimeProvider({ children }: RealtimeProviderProps) {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const channelsRef = useRef<RealtimeChannel[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [activeChannels, setActiveChannels] = useState(0);
@@ -126,6 +128,17 @@ export function RealtimeProvider({ children }: RealtimeProviderProps) {
             type: eventType,
             timestamp: Date.now(),
           });
+
+          // Show a toast notification for non-INSERT events from other users
+          // (INSERTs are usually handled by individual page loading states)
+          if (eventType !== 'INSERT') {
+            const tableTitle = tableName.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+            toast({
+              title: "Live Update",
+              description: `${tableTitle} data was just updated.`,
+              duration: 3000,
+            });
+          }
 
           // Invalidate the in-memory cache for this table
           cacheManager.invalidateByTable(tableName);

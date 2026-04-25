@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useRealtimeQuery } from "./useRealtimeQuery";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 
@@ -19,8 +19,10 @@ export interface RecentSalesActivity {
 }
 
 export const useSalesMetrics = () => {
-  return useQuery({
+  return useRealtimeQuery({
     queryKey: ["sales-metrics"],
+    tableName: "sales_invoices",
+    relatedQueryKeys: [["sales-orders"]],
     queryFn: async (): Promise<SalesMetrics> => {
       const { data: invoices, error } = await supabase
         .from("sales_invoices")
@@ -31,7 +33,6 @@ export const useSalesMetrics = () => {
       const totalRevenue = invoices?.reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0) || 0;
       const totalInvoices = invoices?.length || 0;
       
-      // Get orders count from sales_orders table
       const { data: orders, error: ordersError } = await supabase
         .from("sales_orders")
         .select("id");
@@ -51,8 +52,9 @@ export const useSalesMetrics = () => {
 };
 
 export const useRecentSalesActivity = () => {
-  return useQuery({
+  return useRealtimeQuery({
     queryKey: ["recent-sales-activity"],
+    tableName: "sales_invoices",
     queryFn: async (): Promise<RecentSalesActivity[]> => {
       const { data, error } = await supabase
         .from("sales_invoices")
@@ -76,9 +78,9 @@ export const useRecentSalesActivity = () => {
         invoiceNumber: invoice.invoice_number || "N/A",
         customerName: (invoice.customers as any)?.name || "Unknown Customer",
         amount: invoice.total_amount || 0,
-        date: format(new Date(invoice.invoice_date), "MMM dd, yyyy"),
+        date: invoice.invoice_date ? format(new Date(invoice.invoice_date), "MMM dd, yyyy") : "N/A",
         status: invoice.status,
       })) || [];
     },
   });
-};
+};

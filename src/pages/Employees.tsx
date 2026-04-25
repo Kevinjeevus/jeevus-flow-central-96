@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Plus, Search, Edit, Trash2, User, Mail, Phone, MapPin } from "lucide-react";
+import { useState } from "react";
+import { Plus, Search, Edit, Trash2, User, Mail, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { EmployeeForm } from "@/components/EmployeeForm";
+import { useRealtimeQuery } from "@/hooks/useRealtimeQuery";
 
 interface Employee {
   id: string;
@@ -29,37 +30,25 @@ interface Employee {
 }
 
 export default function Employees() {
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editEmployee, setEditEmployee] = useState<Employee | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [sectorFilter, setSectorFilter] = useState("all");
   const { toast } = useToast();
 
-  const fetchEmployees = async () => {
-    try {
+  const { data: employees = [], isLoading: loading } = useRealtimeQuery<Employee[]>({
+    queryKey: ["employees"],
+    tableName: "employees",
+    queryFn: async () => {
       const { data, error } = await supabase
         .from("employees")
         .select("*")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setEmployees(data || []);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch employees",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchEmployees();
-  }, []);
+      return data || [];
+    },
+  });
 
   const filteredEmployees = employees.filter((employee) => {
     const matchesSearch = 
@@ -69,6 +58,7 @@ export default function Employees() {
     const matchesSector = sectorFilter === "all" || employee.sector === sectorFilter;
     return matchesSearch && matchesSector;
   });
+
 
   const getSectorColor = (sector: string) => {
     switch (sector) {
@@ -106,7 +96,7 @@ export default function Employees() {
         description: "Employee deleted successfully",
       });
       
-      fetchEmployees();
+      // No need to manually fetch, realtime hook handles it
     } catch (error: any) {
       toast({
         title: "Error",
@@ -137,7 +127,7 @@ export default function Employees() {
                 onSuccess={() => {
                   setIsDialogOpen(false);
                   setEditEmployee(null);
-                  fetchEmployees();
+                  // No need to manually fetch, realtime hook handles it
                 }}
               />
             </DialogContent>
