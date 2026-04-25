@@ -14,25 +14,41 @@ export function useCreditNoteNumber() {
     try {
       setIsLoading(true);
 
-      // Get prefixes
+      // 1. Get prefixes
       const { data: prefixData, error: prefixError } = await supabase
         .from("transaction_prefixes")
         .select("credit_note_prefix, financial_year")
         .maybeSingle();
       if (prefixError) throw prefixError;
 
-      // Count existing credit notes
-      const { count, error: countError } = await supabase
-        .from("sale_returns")
-        .select("*", { count: "exact", head: true });
-      if (countError) throw countError;
-
-      const next = (count || 0) + 1;
-      const padded = next.toString().padStart(getNumberPadding(), "0");
       const prefix = prefixData?.credit_note_prefix || "CN/";
       const fy = prefixData?.financial_year || "25-26";
+      const basePrefix = `${prefix}${fy}/`;
 
-      setCreditNoteNumber(`${prefix}${fy}/${padded}`);
+      // 2. Get the latest credit note
+      const { data: lastNote, error: lastError } = await supabase
+        .from("sale_returns")
+        .select("credit_note_number")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (lastError) throw lastError;
+
+      let nextNumber = 1;
+      let padding = getNumberPadding();
+
+      if (lastNote?.credit_note_number) {
+        const match = lastNote.credit_note_number.match(/(\d+)$/);
+        if (match) {
+          const lastNumStr = match[1];
+          nextNumber = parseInt(lastNumStr, 10) + 1;
+          padding = lastNumStr.length;
+        }
+      }
+
+      const padded = nextNumber.toString().padStart(padding, "0");
+      setCreditNoteNumber(`${basePrefix}${padded}`);
     } catch (e) {
       console.error("Error generating credit note number", e);
       setCreditNoteNumber(`CN-${Date.now()}`);

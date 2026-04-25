@@ -100,7 +100,7 @@ export default function KevinSalesOrder() {
   const [showFullInvoicePreview, setShowFullInvoicePreview] = useState(false);
   
   const { toast } = useToast();
-  const { orderNumber, isLoading: orderNumberLoading } = useSaleOrderNumber();
+  const { orderNumber, isLoading: orderNumberLoading, regenerateNumber: regenerateOrderNumber } = useSaleOrderNumber();
   const { invoiceNumber, isLoading: invoiceNumberLoading, regenerateNumber: regenerateInvoiceNumber } = useInvoiceNumber();
   const [customInvoiceNumber, setCustomInvoiceNumber] = useState("");
   const [isManualInvoice, setIsManualInvoice] = useState(false);
@@ -214,7 +214,7 @@ export default function KevinSalesOrder() {
           customers (name, email, phone, address, gstin),
           sales_invoice_items (
             *, 
-            products (name)
+            products (name, hsn_code, gst_rate, unit)
           )
         `)
         .eq("id", invoiceId)
@@ -258,20 +258,20 @@ export default function KevinSalesOrder() {
         invoice_date: invoiceData.invoice_date,
         payment_method: invoiceData.payment_method,
         customer: {
-          name: invoiceData.customer.name,
-          email: invoiceData.customer.email || '',
-          phone: invoiceData.customer.phone || '',
-          address: invoiceData.customer.address || '',
-          gstin: invoiceData.customer.gstin || ''
+          name: invoiceData.customers.name,
+          email: invoiceData.customers.email || '',
+          phone: invoiceData.customers.phone || '',
+          address: invoiceData.customers.address || '',
+          gstin: invoiceData.customers.gstin || ''
         },
         items: invoiceData.sales_invoice_items.map((item: any) => ({
-          product_name: item.product.name,
+          product_name: item.products.name,
           quantity: item.quantity,
           unit_price: item.unit_price,
           total_price: item.total_price,
-          hsn_code: item.product.hsn_code || '',
-          gst_rate: item.product.gst_rate || 18,
-          unit: item.product.unit || 'Nos'
+          hsn_code: item.products.hsn_code || '',
+          gst_rate: item.products.gst_rate || 18,
+          unit: item.products.unit || 'Nos'
         })),
         subtotal: invoiceData.subtotal,
         tax_amount: invoiceData.tax_amount,
@@ -409,6 +409,7 @@ export default function KevinSalesOrder() {
       setSelectedCustomer(null);
       setNotes("");
       fetchSalesOrders();
+      regenerateOrderNumber();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -533,6 +534,7 @@ export default function KevinSalesOrder() {
       setIsManualInvoice(false);
       setCustomInvoiceNumber("");
       fetchSalesInvoices();
+      regenerateInvoiceNumber();
     } catch (error: any) {
       toast({
         title: "Error",

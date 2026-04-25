@@ -14,7 +14,7 @@ export function useInvoiceNumber() {
     try {
       setIsLoading(true);
       
-      // Get the transaction prefixes
+      // 1. Get the transaction prefixes
       const { data: prefixData, error: prefixError } = await supabase
         .from('transaction_prefixes')
         .select('sale_prefix, financial_year')
@@ -22,20 +22,35 @@ export function useInvoiceNumber() {
 
       if (prefixError) throw prefixError;
 
-      // Get the count of existing invoices to generate next number
-      const { count, error: countError } = await supabase
-        .from('sales_invoices')
-        .select('*', { count: 'exact', head: true });
-
-      if (countError) throw countError;
-
-      const nextNumber = (count || 0) + 1;
-      const paddedNumber = nextNumber.toString().padStart(getNumberPadding(), "0");
-      
       const prefix = prefixData?.sale_prefix || 'INV/';
       const financialYear = prefixData?.financial_year || '25-26';
-      
-      const generatedNumber = `${prefix}${financialYear}/${paddedNumber}`;
+      const basePrefix = `${prefix}${financialYear}/`;
+
+      // 2. Get the latest invoice to find the last number
+      const { data: lastInvoice, error: lastError } = await supabase
+        .from('sales_invoices')
+        .select('invoice_number')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (lastError) throw lastError;
+
+      let nextNumber = 1;
+      let padding = getNumberPadding();
+
+      if (lastInvoice?.invoice_number) {
+        // Try to extract the numeric part from the end of the last invoice number
+        const match = lastInvoice.invoice_number.match(/(\d+)$/);
+        if (match) {
+          const lastNumStr = match[1];
+          nextNumber = parseInt(lastNumStr, 10) + 1;
+          padding = lastNumStr.length; // Preserve existing padding
+        }
+      }
+
+      const paddedNumber = nextNumber.toString().padStart(padding, "0");
+      const generatedNumber = `${basePrefix}${paddedNumber}`;
       setInvoiceNumber(generatedNumber);
     } catch (error) {
       console.error('Error generating invoice number:', error);
