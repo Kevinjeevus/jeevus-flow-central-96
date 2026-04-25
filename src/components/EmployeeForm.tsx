@@ -88,12 +88,13 @@ export function EmployeeForm({ employee, onSuccess }: EmployeeFormProps) {
           description: "Employee updated successfully",
         });
       } else {
-        // Create new employee
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
+        // Create new employee — use getUser() to force token refresh
+        const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser();
+        if (authError || !currentUser) {
           throw new Error('You must be logged in to create employees');
         }
 
+        // Let the SDK handle the Authorization header automatically (uses the refreshed token)
         const { data: result, error } = await supabase.functions.invoke('create-employee', {
           body: {
             full_name: data.full_name,
@@ -108,9 +109,6 @@ export function EmployeeForm({ employee, onSuccess }: EmployeeFormProps) {
             salary: data.salary,
             username: data.username,
             assign_role: data.assign_role || "employee",
-          },
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
           },
         });
 
