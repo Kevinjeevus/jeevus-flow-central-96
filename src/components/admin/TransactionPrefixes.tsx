@@ -115,7 +115,7 @@ export function TransactionPrefixes() {
 
   const getFullPrefix = (prefix: string) => {
     if (!prefix) return "None";
-    return `${prefix}${prefixes.financial_year}/00`;
+    return `${prefix}${prefixes.financial_year}/${"0".repeat(padding)}`;
   };
 
   return (
