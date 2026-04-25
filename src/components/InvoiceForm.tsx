@@ -334,30 +334,62 @@ export function InvoiceForm({ onClose, onSuccess, invoiceId }: InvoiceFormProps)
           .eq("id", invoiceData.customer_id);
       }
 
-      // Create invoice
-      const { data: invoice, error: invoiceError } = await supabase
-        .from('sales_invoices')
-        .insert({
-          customer_id: invoiceData.customer_id,
-          user_id: user?.id,
-           route_id: activeSession?.route_id || null,
-           session_id: activeSession?.id || null,
-          invoice_number: invoiceData.invoiceNumber,
-          invoice_date: invoiceData.invoiceDate,
-          due_date: invoiceData.dueDate || null,
-          subtotal,
-          tax_amount: taxAmount,
-          total_amount: total,
-          notes: invoiceData.notes,
-          payment_method: invoiceData.payment_method,
-          payment_account_id: invoiceData.payment_account_id || null,
-          cheque_id: invoiceData.cheque_id || null,
-          status
-        })
-        .select()
-        .single();
+      // Create or update invoice
+      let invoice: any;
+      if (isEditMode && invoiceId) {
+        const { data: updated, error: updateError } = await supabase
+          .from('sales_invoices')
+          .update({
+            customer_id: invoiceData.customer_id,
+            invoice_number: invoiceData.invoiceNumber,
+            invoice_date: invoiceData.invoiceDate,
+            due_date: invoiceData.dueDate || null,
+            subtotal,
+            tax_amount: taxAmount,
+            total_amount: total,
+            notes: invoiceData.notes,
+            payment_method: invoiceData.payment_method,
+            payment_account_id: invoiceData.payment_account_id || null,
+            cheque_id: invoiceData.cheque_id || null,
+            status,
+          })
+          .eq('id', invoiceId)
+          .select()
+          .single();
+        if (updateError) throw updateError;
+        invoice = updated;
 
-      if (invoiceError) throw invoiceError;
+        // Replace items
+        const { error: delError } = await supabase
+          .from('sales_invoice_items')
+          .delete()
+          .eq('sales_invoice_id', invoiceId);
+        if (delError) throw delError;
+      } else {
+        const { data: created, error: invoiceError } = await supabase
+          .from('sales_invoices')
+          .insert({
+            customer_id: invoiceData.customer_id,
+            user_id: user?.id,
+            route_id: activeSession?.route_id || null,
+            session_id: activeSession?.id || null,
+            invoice_number: invoiceData.invoiceNumber,
+            invoice_date: invoiceData.invoiceDate,
+            due_date: invoiceData.dueDate || null,
+            subtotal,
+            tax_amount: taxAmount,
+            total_amount: total,
+            notes: invoiceData.notes,
+            payment_method: invoiceData.payment_method,
+            payment_account_id: invoiceData.payment_account_id || null,
+            cheque_id: invoiceData.cheque_id || null,
+            status
+          })
+          .select()
+          .single();
+        if (invoiceError) throw invoiceError;
+        invoice = created;
+      }
 
       // Create invoice items
       const invoiceItems = validItems.map(item => ({
