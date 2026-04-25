@@ -60,6 +60,7 @@ export default function SaleInvoices() {
   const [activeTab, setActiveTab] = useState<"invoices" | "customers">("invoices");
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [showInvoicePreview, setShowInvoicePreview] = useState(false);
+  const [editInvoiceId, setEditInvoiceId] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
 
   if (loading) {
