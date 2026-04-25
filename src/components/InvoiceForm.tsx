@@ -355,8 +355,9 @@ export function InvoiceForm({ onClose, onSuccess, invoiceId }: InvoiceFormProps)
           })
           .eq('id', invoiceId)
           .select()
-          .single();
+          .maybeSingle();
         if (updateError) throw updateError;
+        if (!updated) throw new Error("Invoice not found or could not be updated");
         invoice = updated;
 
         // Replace items
@@ -386,8 +387,9 @@ export function InvoiceForm({ onClose, onSuccess, invoiceId }: InvoiceFormProps)
             status
           })
           .select()
-          .single();
+          .maybeSingle();
         if (invoiceError) throw invoiceError;
+        if (!created) throw new Error("Failed to create invoice record");
         invoice = created;
       }
 

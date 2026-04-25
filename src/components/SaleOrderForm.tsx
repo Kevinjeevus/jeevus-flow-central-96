@@ -63,12 +63,21 @@ export function SaleOrderForm({ onClose, onSuccess, editOrder }: SaleOrderFormPr
     order_date: editOrder?.order_date || new Date().toISOString().split('T')[0],
     delivery_date: editOrder?.delivery_date || "",
     notes: editOrder?.notes || "",
-    status: editOrder?.status || 'pending'
+    status: editOrder?.status || 'pending',
+    order_number: editOrder?.order_number || ""
   });
+
+  const [isManual, setIsManual] = useState(!!editOrder);
 
   const [items, setItems] = useState<OrderItem[]>([
     { id: "1", product_id: "", productName: "", quantity: 1, unitPrice: 0, gstRate: 0, taxAmount: 0, total: 0 }
   ]);
+
+  useEffect(() => {
+    if (orderNumber && !editOrder && !isManual) {
+      setOrderData(prev => ({ ...prev, order_number: orderNumber }));
+    }
+  }, [orderNumber, editOrder, isManual]);
 
   useEffect(() => {
     fetchCustomers();
@@ -202,14 +211,16 @@ export function SaleOrderForm({ onClose, onSuccess, editOrder }: SaleOrderFormPr
             subtotal,
             tax_amount: taxAmount,
             total_amount: total,
+            order_number: orderData.order_number,
             notes: orderData.notes,
             status
           })
           .eq('id', editOrder.id)
           .select()
-          .single();
+          .maybeSingle();
 
         if (orderError) throw orderError;
+        if (!updatedOrder) throw new Error("Order not found or could not be updated");
         orderData_ = updatedOrder;
 
         // Delete existing items
@@ -223,7 +234,7 @@ export function SaleOrderForm({ onClose, onSuccess, editOrder }: SaleOrderFormPr
           .from('sales_orders')
           .insert({
             customer_id: orderData.customer_id,
-            order_number: orderNumber,
+            order_number: orderData.order_number || orderNumber,
             order_date: orderData.order_date,
             delivery_date: orderData.delivery_date || null,
             subtotal,
@@ -233,9 +244,10 @@ export function SaleOrderForm({ onClose, onSuccess, editOrder }: SaleOrderFormPr
             status
           })
           .select()
-          .single();
+          .maybeSingle();
 
         if (orderError) throw orderError;
+        if (!newOrder) throw new Error("Failed to create order record");
         orderData_ = newOrder;
       }
 
@@ -385,13 +397,31 @@ export function SaleOrderForm({ onClose, onSuccess, editOrder }: SaleOrderFormPr
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="orderNumber">Order Number</Label>
-                <Input
-                  id="orderNumber"
-                  value={orderNumber}
-                  disabled
-                  placeholder="SO-001"
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="orderNumber"
+                    value={orderData.order_number}
+                    onChange={(e) => {
+                      setOrderData({...orderData, order_number: e.target.value});
+                      setIsManual(true);
+                    }}
+                    placeholder="SO-001"
+                    className="flex-1"
+                  />
+                  {!editOrder && (
+                    <Button 
+                      variant="outline" 
+                      size="icon"
+                      onClick={() => {
+                        setIsManual(false);
+                        setOrderData({...orderData, order_number: orderNumber});
+                      }}
+                      title="Reset to auto-generated number"
+                    >
+                      <Plus className="h-4 w-4 rotate-45" />
+                    </Button>
+                  )}
+                </div>
               </div>
               <div>
                 <Label htmlFor="orderDate">Order Date</Label>

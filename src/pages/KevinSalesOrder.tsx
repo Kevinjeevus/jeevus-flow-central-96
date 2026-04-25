@@ -219,9 +219,17 @@ export default function KevinSalesOrder() {
           )
         `)
         .eq("id", invoiceId)
-        .single();
+        .maybeSingle();
 
       if (invoiceError) throw invoiceError;
+      if (!invoiceData) {
+        toast({
+          title: "Error",
+          description: "Invoice not found",
+          variant: "destructive",
+        });
+        return;
+      }
 
       // Fetch payment account details if available
       let bankAccount = null;
@@ -230,7 +238,7 @@ export default function KevinSalesOrder() {
           .from("accounts")
           .select("*")
           .eq("id", invoiceData.payment_account_id)
-          .single();
+          .maybeSingle();
         
         if (accountData) {
           bankAccount = {
@@ -411,6 +419,43 @@ export default function KevinSalesOrder() {
     }
   };
 
+  const handleUpdateInvoice = async () => {
+    if (!editingInvoice) return;
+    
+    try {
+      setSubmitting(true);
+      const { data, error } = await supabase
+        .from("sales_invoices")
+        .update({
+          invoice_number: editingInvoice.invoice_number,
+          payment_method: editingInvoice.payment_method,
+          status: editingInvoice.status,
+          notes: editingInvoice.notes,
+        })
+        .eq("id", editingInvoice.id)
+        .select()
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) throw new Error("Invoice not found or no changes made");
+
+      toast({
+        title: "Invoice Updated",
+        description: `Invoice ${editingInvoice.invoice_number} has been updated successfully`,
+      });
+      setEditingInvoice(null);
+      fetchSalesInvoices();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleCreateInvoice = async () => {
     if (!selectedCustomer) {
       toast({
@@ -455,9 +500,10 @@ export default function KevinSalesOrder() {
         .from("sales_invoices")
         .insert(invoiceData)
         .select()
-        .single();
+        .maybeSingle();
 
       if (invoiceError) throw invoiceError;
+      if (!invoiceResult) throw new Error("Failed to create invoice record");
 
       const invoiceItems = cart.map(item => ({
         sales_invoice_id: invoiceResult.id,
@@ -1214,7 +1260,10 @@ export default function KevinSalesOrder() {
                 </div>
                 <div className="space-y-2">
                   <Label>Payment Method</Label>
-                  <Select defaultValue={editingInvoice.payment_method || "cash"}>
+                  <Select 
+                    value={editingInvoice.payment_method || "cash"}
+                    onValueChange={(value) => setEditingInvoice({...editingInvoice, payment_method: value})}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -1230,7 +1279,10 @@ export default function KevinSalesOrder() {
 
                 <div className="space-y-2">
                   <Label>Status</Label>
-                  <Select defaultValue={editingInvoice.status}>
+                  <Select 
+                    value={editingInvoice.status}
+                    onValueChange={(value) => setEditingInvoice({...editingInvoice, status: value})}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -1246,7 +1298,8 @@ export default function KevinSalesOrder() {
                 <div className="space-y-2">
                   <Label>Notes</Label>
                   <Textarea 
-                    defaultValue={editingInvoice.notes || ""}
+                    value={editingInvoice.notes || ""}
+                    onChange={(e) => setEditingInvoice({...editingInvoice, notes: e.target.value})}
                     placeholder="Add notes..."
                     rows={3}
                   />
@@ -1262,16 +1315,10 @@ export default function KevinSalesOrder() {
                   </Button>
                   <Button 
                     className="flex-1"
-                    onClick={() => {
-                      toast({
-                        title: "Invoice Updated",
-                        description: `Invoice ${editingInvoice.invoice_number} has been updated`,
-                      });
-                      setEditingInvoice(null);
-                      fetchSalesInvoices();
-                    }}
+                    disabled={submitting}
+                    onClick={handleUpdateInvoice}
                   >
-                    Save Changes
+                    {submitting ? "Saving..." : "Save Changes"}
                   </Button>
                 </div>
               </div>

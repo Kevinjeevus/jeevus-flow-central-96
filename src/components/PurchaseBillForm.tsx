@@ -32,7 +32,9 @@ interface PurchaseBillFormProps {
 
 export function PurchaseBillForm({ onClose, onSuccess, editBill }: PurchaseBillFormProps) {
   const { toast } = useToast();
-  const { billNumber } = usePurchaseBillNumber();
+  const { billNumber, isLoading: numLoading } = usePurchaseBillNumber();
+  const [manualBillNumber, setManualBillNumber] = useState("");
+  const [isManual, setIsManual] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -50,6 +52,23 @@ export function PurchaseBillForm({ onClose, onSuccess, editBill }: PurchaseBillF
   ]);
 
   useEffect(() => {
+    if (billNumber && !editBill && !isManual) {
+      setManualBillNumber(billNumber);
+    }
+  }, [billNumber, editBill, isManual]);
+
+  useEffect(() => {
+    if (editBill) {
+      setBillData({
+        supplier_id: editBill.supplier_id,
+        bill_date: editBill.bill_date,
+        due_date: editBill.due_date || "",
+        notes: editBill.notes || "",
+        status: editBill.status,
+      });
+      setManualBillNumber(editBill.bill_number);
+      setIsManual(true);
+    }
     const load = async () => {
       const [{ data: s, error: se }, { data: p, error: pe }] = await Promise.all([
         supabase.from("suppliers").select("id,name,email,phone").order("name"),
@@ -59,7 +78,7 @@ export function PurchaseBillForm({ onClose, onSuccess, editBill }: PurchaseBillF
       if (pe) console.error(pe); else setProducts(p || []);
     };
     load();
-  }, []);
+  }, [editBill]);
 
   const addItem = () => {
     setItems((prev) => [
@@ -121,6 +140,7 @@ export function PurchaseBillForm({ onClose, onSuccess, editBill }: PurchaseBillF
           .from("purchase_bills")
           .update({
             supplier_id: billData.supplier_id,
+            bill_number: manualBillNumber,
             bill_date: billData.bill_date,
             due_date: billData.due_date || null,
             subtotal,
@@ -131,8 +151,9 @@ export function PurchaseBillForm({ onClose, onSuccess, editBill }: PurchaseBillF
           })
           .eq("id", editBill.id)
           .select()
-          .single();
+          .maybeSingle();
         if (error) throw error;
+        if (!data) throw new Error("Bill not found or could not be updated");
         billRec = data;
         await supabase.from("purchase_bill_items").delete().eq("purchase_bill_id", editBill.id);
       } else {
@@ -141,7 +162,7 @@ export function PurchaseBillForm({ onClose, onSuccess, editBill }: PurchaseBillF
           .insert({
             supplier_id: billData.supplier_id,
             user_id: user.id,
-            bill_number: billNumber || `PB-${Date.now()}`,
+            bill_number: manualBillNumber || billNumber || `PB-${Date.now()}`,
             bill_date: billData.bill_date,
             due_date: billData.due_date || null,
             subtotal,
@@ -151,8 +172,9 @@ export function PurchaseBillForm({ onClose, onSuccess, editBill }: PurchaseBillF
             status,
           })
           .select()
-          .single();
+          .maybeSingle();
         if (error) throw error;
+        if (!data) throw new Error("Failed to create bill record");
         billRec = data;
       }
 
@@ -234,7 +256,30 @@ export function PurchaseBillForm({ onClose, onSuccess, editBill }: PurchaseBillF
           <CardContent className="space-y-4">
             <div>
               <Label>Bill Number</Label>
-              <Input value={billNumber} disabled placeholder="PB/2025-26/01" />
+              <div className="flex gap-2">
+                <Input 
+                  value={manualBillNumber} 
+                  onChange={(e) => {
+                    setManualBillNumber(e.target.value);
+                    setIsManual(true);
+                  }}
+                  placeholder="PB/2025-26/01" 
+                  className="flex-1"
+                />
+                {!editBill && (
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={() => {
+                      setIsManual(false);
+                      setManualBillNumber(billNumber);
+                    }}
+                    title="Reset to auto-generated number"
+                  >
+                    <Plus className="h-4 w-4 rotate-45" />
+                  </Button>
+                )}
+              </div>
             </div>
             <div>
               <Label>Bill Date</Label>
