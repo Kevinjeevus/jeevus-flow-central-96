@@ -450,7 +450,9 @@ export function InvoiceForm({ onClose, onSuccess, invoiceId }: InvoiceFormProps)
 
       toast({
         title: "Success",
-        description: `Invoice ${status === 'draft' ? 'saved as draft' : 'created and sent'}`,
+        description: isEditMode
+          ? "Invoice updated successfully"
+          : `Invoice ${status === 'draft' ? 'saved as draft' : 'created and sent'}`,
       });
       
       onSuccess?.();
