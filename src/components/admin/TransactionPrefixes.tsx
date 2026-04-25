@@ -7,6 +7,7 @@ import { Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { getNumberPadding, setNumberPadding } from "@/lib/numberPadding";
 
 interface TransactionPrefixData {
   id?: string;
@@ -26,6 +27,7 @@ export function TransactionPrefixes() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [padding, setPadding] = useState<number>(getNumberPadding());
   const [prefixes, setPrefixes] = useState<TransactionPrefixData>({
     firm_name: "JEEVUS NATURALS",
     sale_prefix: "INV/",
@@ -72,6 +74,7 @@ export function TransactionPrefixes() {
     
     setIsLoading(true);
     try {
+      setNumberPadding(padding);
       const prefixData = {
         ...prefixes,
         created_by: user.id,
@@ -113,7 +116,7 @@ export function TransactionPrefixes() {
 
   const getFullPrefix = (prefix: string) => {
     if (!prefix) return "None";
-    return `${prefix}${prefixes.financial_year}/00`;
+    return `${prefix}${prefixes.financial_year}/${"0".repeat(padding)}`;
   };
 
   return (
@@ -152,7 +155,29 @@ export function TransactionPrefixes() {
         </Select>
       </div>
 
-      {/* Prefixes */}
+      {/* Number Padding (zeros) */}
+      <div className="space-y-2">
+        <Label htmlFor="number-padding">Number Padding (zeros)</Label>
+        <Select
+          value={String(padding)}
+          onValueChange={(v) => setPadding(parseInt(v, 10))}
+        >
+          <SelectTrigger id="number-padding">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {[1, 2, 3, 4, 5, 6].map((n) => (
+              <SelectItem key={n} value={String(n)}>
+                {n} digit{n > 1 ? "s" : ""} ({"0".repeat(n)} → {"0".repeat(n - 1)}1)
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          Controls how many digits the running number is padded to. E.g. padding 3 → INV/{prefixes.financial_year}/001
+        </p>
+      </div>
+
       <div className="border rounded-lg p-4">
         <h3 className="text-lg font-semibold mb-4 text-foreground">Prefixes</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

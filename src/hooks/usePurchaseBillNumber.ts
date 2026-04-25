@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getNumberPadding } from "@/lib/numberPadding";
 
 export function usePurchaseBillNumber() {
   const [billNumber, setBillNumber] = useState("");
@@ -22,7 +23,7 @@ export function usePurchaseBillNumber() {
       if (countError) throw countError;
 
       const next = (count || 0) + 1;
-      const padded = next.toString().padStart(2, "0");
+      const padded = next.toString().padStart(getNumberPadding(), "0");
       const prefix = prefixData?.purchase_bill_prefix || "PB/";
       const fy = prefixData?.financial_year || "25-26";
       setBillNumber(`${prefix}${fy}/${padded}`);

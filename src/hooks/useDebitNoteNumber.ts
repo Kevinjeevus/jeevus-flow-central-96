@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getNumberPadding } from "@/lib/numberPadding";
 
 export function useDebitNoteNumber() {
   const [debitNoteNumber, setDebitNoteNumber] = useState("");
@@ -27,7 +28,7 @@ export function useDebitNoteNumber() {
       if (countError) throw countError;
 
       const next = (count || 0) + 1;
-      const padded = next.toString().padStart(2, "0");
+      const padded = next.toString().padStart(getNumberPadding(), "0");
       const prefix = prefixData?.purchase_return_prefix || "DN/";
       const fy = prefixData?.financial_year || "25-26";
 
