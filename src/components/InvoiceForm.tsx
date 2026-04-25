@@ -54,7 +54,7 @@ export function InvoiceForm({ onClose, onSuccess, invoiceId }: InvoiceFormProps)
   const isEditMode = !!invoiceId;
   const { toast } = useToast();
   const { user } = useAuth();
-  const { invoiceNumber } = useInvoiceNumber();
+  const { invoiceNumber, regenerateNumber } = useInvoiceNumber();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -610,12 +610,26 @@ export function InvoiceForm({ onClose, onSuccess, invoiceId }: InvoiceFormProps)
           <CardContent className="space-y-4">
             <div>
               <Label htmlFor="invoiceNumber">Invoice Number</Label>
-              <Input
-                id="invoiceNumber"
-                value={invoiceData.invoiceNumber}
-                onChange={(e) => setInvoiceData({...invoiceData, invoiceNumber: e.target.value})}
-                placeholder="INV-001"
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="invoiceNumber"
+                  value={invoiceData.invoiceNumber}
+                  onChange={(e) => setInvoiceData({...invoiceData, invoiceNumber: e.target.value})}
+                  placeholder="INV-001"
+                  className="flex-1"
+                />
+                {!isEditMode && (
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    onClick={() => regenerateNumber?.()}
+                    type="button"
+                    title="Regenerate Invoice Number"
+                  >
+                    <Plus className="h-4 w-4 rotate-45" />
+                  </Button>
+                )}
+              </div>
             </div>
             <div>
               <Label htmlFor="invoiceDate">Invoice Date</Label>

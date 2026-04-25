@@ -101,8 +101,16 @@ export default function KevinSalesOrder() {
   
   const { toast } = useToast();
   const { orderNumber, isLoading: orderNumberLoading } = useSaleOrderNumber();
-  const { invoiceNumber, isLoading: invoiceNumberLoading } = useInvoiceNumber();
+  const { invoiceNumber, isLoading: invoiceNumberLoading, regenerateNumber: regenerateInvoiceNumber } = useInvoiceNumber();
+  const [customInvoiceNumber, setCustomInvoiceNumber] = useState("");
+  const [isManualInvoice, setIsManualInvoice] = useState(false);
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (invoiceNumber && !isManualInvoice) {
+      setCustomInvoiceNumber(invoiceNumber);
+    }
+  }, [invoiceNumber, isManualInvoice]);
 
   useEffect(() => {
     fetchProducts();
@@ -428,7 +436,7 @@ export default function KevinSalesOrder() {
 
       const invoiceData: any = {
         customer_id: selectedCustomer.id,
-        invoice_number: invoiceNumber,
+        invoice_number: isManualInvoice ? customInvoiceNumber : invoiceNumber,
         user_id: user?.id!,
         subtotal,
         tax_amount: tax,
@@ -467,7 +475,7 @@ export default function KevinSalesOrder() {
 
       toast({
         title: "Invoice Created",
-        description: `Sales invoice ${invoiceNumber} has been created successfully`,
+        description: `Sales invoice ${isManualInvoice ? customInvoiceNumber : invoiceNumber} has been created successfully`,
       });
 
       // Reset form and refresh invoices
@@ -476,7 +484,8 @@ export default function KevinSalesOrder() {
       setNotes("");
       setPaymentMethod("cash");
       setSelectedAccountId("");
-      setShowInvoiceDialog(false);
+      setIsManualInvoice(false);
+      setCustomInvoiceNumber("");
       fetchSalesInvoices();
     } catch (error: any) {
       toast({
@@ -798,7 +807,7 @@ export default function KevinSalesOrder() {
                             disabled={submitting || cart.length === 0 || !selectedCustomer || invoiceNumberLoading}
                           >
                             <CreditCard className="h-4 w-4 mr-2" />
-                            Create Invoice {invoiceNumber && `(${invoiceNumber})`}
+                             Create Invoice {customInvoiceNumber && `(${customInvoiceNumber})`}
                           </Button>
                         </div>
                       </div>
@@ -960,8 +969,38 @@ export default function KevinSalesOrder() {
               <DialogDescription>
                 Configure payment details for the invoice
               </DialogDescription>
-            </DialogHeader>
+             </DialogHeader>
             <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="invoice-number">Invoice Number</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    id="invoice-number"
+                    value={customInvoiceNumber}
+                    onChange={(e) => {
+                      setCustomInvoiceNumber(e.target.value);
+                      setIsManualInvoice(true);
+                    }}
+                    placeholder="INV/2025/001"
+                    className="flex-1"
+                  />
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={() => {
+                      setIsManualInvoice(false);
+                      setCustomInvoiceNumber(invoiceNumber);
+                    }}
+                    title="Reset to auto-generated number"
+                  >
+                    <Plus className="h-4 w-4 rotate-45" />
+                  </Button>
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  {isManualInvoice ? "Manual entry enabled" : "Auto-generated number"}
+                </p>
+              </div>
+
               <div className="space-y-2">
                 <Label>Payment Method</Label>
                 <Select value={paymentMethod} onValueChange={setPaymentMethod}>
@@ -1159,11 +1198,20 @@ export default function KevinSalesOrder() {
             <DialogHeader>
               <DialogTitle>Edit Invoice</DialogTitle>
               <DialogDescription>
-                Update invoice {editingInvoice?.invoice_number}
+                 Update invoice {editingInvoice?.invoice_number}
               </DialogDescription>
             </DialogHeader>
             {editingInvoice && (
               <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Invoice Number</Label>
+                  <Input 
+                    defaultValue={editingInvoice.invoice_number}
+                    onChange={(e) => {
+                      setEditingInvoice({...editingInvoice, invoice_number: e.target.value});
+                    }}
+                  />
+                </div>
                 <div className="space-y-2">
                   <Label>Payment Method</Label>
                   <Select defaultValue={editingInvoice.payment_method || "cash"}>
