@@ -74,6 +74,7 @@ export function TransactionPrefixes() {
     
     setIsLoading(true);
     try {
+      setNumberPadding(padding);
       const prefixData = {
         ...prefixes,
         created_by: user.id,
