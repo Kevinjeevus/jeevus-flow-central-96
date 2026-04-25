@@ -744,6 +744,10 @@ export default function SaleInvoices() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-40">
+                                <DropdownMenuItem onClick={() => setEditInvoiceId(invoice.id)}>
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Edit
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleShareInvoice(invoice)}>
                                   <Share className="h-4 w-4 mr-2" />
                                   Share
