@@ -517,7 +517,16 @@ export default function KevinSalesOrder() {
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
       <div className="container mx-auto p-4 md:p-6">
         {/* Header */}
-        <div className="mb-8 text-center">
+        <div className="mb-8 relative text-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(-1)}
+            className="absolute left-0 top-0"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
           <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">
             Kevin ERP Sales Center
           </h1>
