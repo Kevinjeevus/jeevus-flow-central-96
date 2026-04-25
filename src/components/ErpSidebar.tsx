@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Store,
@@ -34,6 +34,7 @@ import {
   ArrowDownCircle,
   ShoppingBag,
   Tag,
+  LogOut,
 } from "lucide-react";
 
 import {
@@ -47,9 +48,11 @@ import {
   SidebarMenuItem,
   useSidebar,
   SidebarHeader,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 const menuItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
@@ -164,7 +167,13 @@ export function ErpSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
+  const navigate = useNavigate();
   const currentPath = location.pathname;
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/auth");
+  };
   
   // Initialize open groups - expand groups that contain the current route
   const getInitialOpenGroups = () => {
@@ -262,6 +271,20 @@ export function ErpSidebar() {
           })}
         </SidebarMenu>
       </SidebarContent>
+
+      <SidebarFooter className="border-t border-sidebar-border p-2">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={handleLogout}
+              className="w-full text-red-400 hover:text-red-300 hover:bg-red-500/10 cursor-pointer"
+            >
+              <LogOut className="h-4 w-4" />
+              {!collapsed && <span>Logout</span>}
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   );
 }
