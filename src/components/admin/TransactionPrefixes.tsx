@@ -7,6 +7,7 @@ import { Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { getNumberPadding, setNumberPadding } from "@/lib/numberPadding";
 
 interface TransactionPrefixData {
   id?: string;
