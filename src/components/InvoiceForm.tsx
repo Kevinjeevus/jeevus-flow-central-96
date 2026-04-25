@@ -93,13 +93,58 @@ export function InvoiceForm({ onClose, onSuccess, invoiceId }: InvoiceFormProps)
   }, [user]);
 
   useEffect(() => {
-    if (invoiceNumber) {
+    if (invoiceNumber && !isEditMode) {
       setInvoiceData(prev => ({
         ...prev,
         invoiceNumber: invoiceNumber
       }));
     }
-  }, [invoiceNumber]);
+  }, [invoiceNumber, isEditMode]);
+
+  useEffect(() => {
+    if (!invoiceId) return;
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('sales_invoices')
+          .select('*, sales_invoice_items(*, products(name, sale_price, sku, gst_rate))')
+          .eq('id', invoiceId)
+          .single();
+        if (error) throw error;
+        setInvoiceData({
+          customer_id: data.customer_id || "",
+          invoiceNumber: data.invoice_number || "",
+          invoiceDate: data.invoice_date || new Date().toISOString().split('T')[0],
+          dueDate: data.due_date || "",
+          notes: data.notes || "",
+          payment_method: data.payment_method || "cash",
+          payment_account_id: data.payment_account_id || "",
+          cheque_id: data.cheque_id || "",
+          received_amount: ""
+        });
+        const loadedItems: InvoiceItem[] = (data.sales_invoice_items || []).map((it: any, idx: number) => {
+          const qty = Number(it.quantity) || 0;
+          const price = Number(it.unit_price) || 0;
+          const gst = Number(it.products?.gst_rate) || 0;
+          const sub = qty * price;
+          const tax = (sub * gst) / 100;
+          return {
+            id: it.id || String(idx + 1),
+            product_id: it.product_id,
+            productName: it.products?.name || "",
+            quantity: qty,
+            unitPrice: price,
+            gstRate: gst,
+            taxAmount: tax,
+            total: sub + tax,
+          };
+        });
+        if (loadedItems.length) setItems(loadedItems);
+      } catch (e: any) {
+        toast({ title: "Error", description: e.message || "Failed to load invoice", variant: "destructive" });
+      }
+    })();
+  }, [invoiceId]);
 
   const fetchCustomers = async () => {
     try {
