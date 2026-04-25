@@ -505,8 +505,8 @@ export function InvoiceForm({ onClose, onSuccess, invoiceId }: InvoiceFormProps)
     <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-xl md:text-2xl font-bold">Create Invoice</h2>
-          <p className="text-muted-foreground">Create a new sales invoice</p>
+          <h2 className="text-xl md:text-2xl font-bold">{isEditMode ? "Edit Invoice" : "Create Invoice"}</h2>
+          <p className="text-muted-foreground">{isEditMode ? "Update this sales invoice" : "Create a new sales invoice"}</p>
         </div>
       </div>
 
