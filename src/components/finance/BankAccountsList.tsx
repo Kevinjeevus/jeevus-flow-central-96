@@ -122,7 +122,7 @@ export function BankAccountsList() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => {/* Handle edit */}}
+                        onClick={() => setEditAccount(account)}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
