@@ -876,7 +876,7 @@ export function InvoiceForm({ onClose, onSuccess, invoiceId }: InvoiceFormProps)
             disabled={isLoading}
           >
             <Send className="h-4 w-4 mr-2" />
-            {isLoading ? "Creating..." : "Create Invoice"}
+            {isLoading ? (isEditMode ? "Updating..." : "Creating...") : (isEditMode ? "Update Invoice" : "Create Invoice")}
           </Button>
         </div>
       </div>
