@@ -89,6 +89,16 @@ export function BankAccountsList() {
             <BankAccountForm onClose={() => setIsFormOpen(false)} />
           </DialogContent>
         </Dialog>
+        <Dialog open={!!editAccount} onOpenChange={(open) => !open && setEditAccount(null)}>
+          <DialogContent className="max-w-5xl">
+            {editAccount && (
+              <BankAccountForm
+                account={editAccount}
+                onClose={() => setEditAccount(null)}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="grid gap-4">
