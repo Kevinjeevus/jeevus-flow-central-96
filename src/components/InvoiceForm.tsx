@@ -411,7 +411,7 @@ export function InvoiceForm({ onClose, onSuccess, invoiceId }: InvoiceFormProps)
         .from('sales_invoices')
         .select(`
           *,
-          customers (name, email, phone, address),
+          customers (name, email, phone, address, gstin),
           sales_invoice_items (
             *, 
             products (name)
