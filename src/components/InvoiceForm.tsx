@@ -411,7 +411,7 @@ export function InvoiceForm({ onClose, onSuccess, invoiceId }: InvoiceFormProps)
         .from('sales_invoices')
         .select(`
           *,
-          customers (name, email, phone, address),
+          customers (name, email, phone, address, gstin),
           sales_invoice_items (
             *, 
             products (name)
@@ -431,7 +431,8 @@ export function InvoiceForm({ onClose, onSuccess, invoiceId }: InvoiceFormProps)
           name: completeInvoice.customers.name,
           email: completeInvoice.customers.email,
           phone: completeInvoice.customers.phone,
-          address: completeInvoice.customers.address
+          address: completeInvoice.customers.address,
+          gstin: completeInvoice.customers.gstin
         },
         items: completeInvoice.sales_invoice_items.map((item: any) => ({
           product_name: item.products.name,
