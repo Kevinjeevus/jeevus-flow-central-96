@@ -74,6 +74,7 @@ interface Account {
 }
 
 export default function KevinSalesOrder() {
+  const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
