@@ -13,6 +13,7 @@ import { BankAccountForm } from "./BankAccountForm";
 export function BankAccountsList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editAccount, setEditAccount] = useState<any | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -88,6 +89,16 @@ export function BankAccountsList() {
             <BankAccountForm onClose={() => setIsFormOpen(false)} />
           </DialogContent>
         </Dialog>
+        <Dialog open={!!editAccount} onOpenChange={(open) => !open && setEditAccount(null)}>
+          <DialogContent className="max-w-5xl">
+            {editAccount && (
+              <BankAccountForm
+                account={editAccount}
+                onClose={() => setEditAccount(null)}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="grid gap-4">
@@ -111,7 +122,7 @@ export function BankAccountsList() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => {/* Handle edit */}}
+                        onClick={() => setEditAccount(account)}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
