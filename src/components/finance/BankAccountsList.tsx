@@ -13,6 +13,7 @@ import { BankAccountForm } from "./BankAccountForm";
 export function BankAccountsList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editAccount, setEditAccount] = useState<any | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
