@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getNumberPadding } from "@/lib/numberPadding";
 
 export function useSaleOrderNumber() {
   const [orderNumber, setOrderNumber] = useState("");
@@ -29,7 +30,7 @@ export function useSaleOrderNumber() {
       if (countError) throw countError;
 
       const nextNumber = (count || 0) + 1;
-      const paddedNumber = nextNumber.toString().padStart(2, '0');
+      const paddedNumber = nextNumber.toString().padStart(getNumberPadding(), "0");
       
       const prefix = prefixData?.sale_order_prefix || 'SO/';
       const financialYear = prefixData?.financial_year || '25-26';
