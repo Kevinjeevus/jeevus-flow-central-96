@@ -47,9 +47,11 @@ interface Product {
 interface InvoiceFormProps {
   onClose: () => void;
   onSuccess?: () => void;
+  invoiceId?: string;
 }
 
-export function InvoiceForm({ onClose, onSuccess }: InvoiceFormProps) {
+export function InvoiceForm({ onClose, onSuccess, invoiceId }: InvoiceFormProps) {
+  const isEditMode = !!invoiceId;
   const { toast } = useToast();
   const { user } = useAuth();
   const { invoiceNumber } = useInvoiceNumber();
