@@ -546,6 +546,7 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
                   {invoiceData.customer.email && <p>{invoiceData.customer.email}</p>}
                   {invoiceData.customer.phone && <p>{invoiceData.customer.phone}</p>}
                   {invoiceData.customer.address && <p>{invoiceData.customer.address}</p>}
+                  {invoiceData.customer.gstin && <p><span className="font-medium">GSTIN:</span> {invoiceData.customer.gstin}</p>}
                 </div>
               </div>
               <div>
