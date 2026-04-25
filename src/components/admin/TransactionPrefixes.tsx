@@ -27,6 +27,7 @@ export function TransactionPrefixes() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [padding, setPadding] = useState<number>(getNumberPadding());
   const [prefixes, setPrefixes] = useState<TransactionPrefixData>({
     firm_name: "JEEVUS NATURALS",
     sale_prefix: "INV/",
