@@ -60,6 +60,7 @@ export default function SaleInvoices() {
   const [activeTab, setActiveTab] = useState<"invoices" | "customers">("invoices");
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [showInvoicePreview, setShowInvoicePreview] = useState(false);
+  const [editInvoiceId, setEditInvoiceId] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
 
   if (loading) {
@@ -382,6 +383,23 @@ export default function SaleInvoices() {
           onRefresh={fetchInvoices}
         />
       )}
+
+      {/* Edit Invoice Dialog */}
+      <Dialog open={!!editInvoiceId} onOpenChange={(open) => !open && setEditInvoiceId(null)}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          {editInvoiceId && (
+            <InvoiceForm
+              invoiceId={editInvoiceId}
+              onSuccess={() => {
+                setEditInvoiceId(null);
+                fetchInvoices();
+              }}
+              onClose={() => setEditInvoiceId(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
       <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex flex-col space-y-4">
@@ -520,6 +538,10 @@ export default function SaleInvoices() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => setEditInvoiceId(invoice.id)}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleShareInvoice(invoice)}>
                                 <Share className="h-4 w-4 mr-2" />
                                 Share
@@ -722,6 +744,10 @@ export default function SaleInvoices() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-40">
+                                <DropdownMenuItem onClick={() => setEditInvoiceId(invoice.id)}>
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Edit
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleShareInvoice(invoice)}>
                                   <Share className="h-4 w-4 mr-2" />
                                   Share

@@ -47,9 +47,11 @@ interface Product {
 interface InvoiceFormProps {
   onClose: () => void;
   onSuccess?: () => void;
+  invoiceId?: string;
 }
 
-export function InvoiceForm({ onClose, onSuccess }: InvoiceFormProps) {
+export function InvoiceForm({ onClose, onSuccess, invoiceId }: InvoiceFormProps) {
+  const isEditMode = !!invoiceId;
   const { toast } = useToast();
   const { user } = useAuth();
   const { invoiceNumber } = useInvoiceNumber();
@@ -91,13 +93,58 @@ export function InvoiceForm({ onClose, onSuccess }: InvoiceFormProps) {
   }, [user]);
 
   useEffect(() => {
-    if (invoiceNumber) {
+    if (invoiceNumber && !isEditMode) {
       setInvoiceData(prev => ({
         ...prev,
         invoiceNumber: invoiceNumber
       }));
     }
-  }, [invoiceNumber]);
+  }, [invoiceNumber, isEditMode]);
+
+  useEffect(() => {
+    if (!invoiceId) return;
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('sales_invoices')
+          .select('*, sales_invoice_items(*, products(name, sale_price, sku, gst_rate))')
+          .eq('id', invoiceId)
+          .single();
+        if (error) throw error;
+        setInvoiceData({
+          customer_id: data.customer_id || "",
+          invoiceNumber: data.invoice_number || "",
+          invoiceDate: data.invoice_date || new Date().toISOString().split('T')[0],
+          dueDate: data.due_date || "",
+          notes: data.notes || "",
+          payment_method: data.payment_method || "cash",
+          payment_account_id: data.payment_account_id || "",
+          cheque_id: data.cheque_id || "",
+          received_amount: ""
+        });
+        const loadedItems: InvoiceItem[] = (data.sales_invoice_items || []).map((it: any, idx: number) => {
+          const qty = Number(it.quantity) || 0;
+          const price = Number(it.unit_price) || 0;
+          const gst = Number(it.products?.gst_rate) || 0;
+          const sub = qty * price;
+          const tax = (sub * gst) / 100;
+          return {
+            id: it.id || String(idx + 1),
+            product_id: it.product_id,
+            productName: it.products?.name || "",
+            quantity: qty,
+            unitPrice: price,
+            gstRate: gst,
+            taxAmount: tax,
+            total: sub + tax,
+          };
+        });
+        if (loadedItems.length) setItems(loadedItems);
+      } catch (e: any) {
+        toast({ title: "Error", description: e.message || "Failed to load invoice", variant: "destructive" });
+      }
+    })();
+  }, [invoiceId]);
 
   const fetchCustomers = async () => {
     try {
@@ -287,30 +334,62 @@ export function InvoiceForm({ onClose, onSuccess }: InvoiceFormProps) {
           .eq("id", invoiceData.customer_id);
       }
 
-      // Create invoice
-      const { data: invoice, error: invoiceError } = await supabase
-        .from('sales_invoices')
-        .insert({
-          customer_id: invoiceData.customer_id,
-          user_id: user?.id,
-           route_id: activeSession?.route_id || null,
-           session_id: activeSession?.id || null,
-          invoice_number: invoiceData.invoiceNumber,
-          invoice_date: invoiceData.invoiceDate,
-          due_date: invoiceData.dueDate || null,
-          subtotal,
-          tax_amount: taxAmount,
-          total_amount: total,
-          notes: invoiceData.notes,
-          payment_method: invoiceData.payment_method,
-          payment_account_id: invoiceData.payment_account_id || null,
-          cheque_id: invoiceData.cheque_id || null,
-          status
-        })
-        .select()
-        .single();
+      // Create or update invoice
+      let invoice: any;
+      if (isEditMode && invoiceId) {
+        const { data: updated, error: updateError } = await supabase
+          .from('sales_invoices')
+          .update({
+            customer_id: invoiceData.customer_id,
+            invoice_number: invoiceData.invoiceNumber,
+            invoice_date: invoiceData.invoiceDate,
+            due_date: invoiceData.dueDate || null,
+            subtotal,
+            tax_amount: taxAmount,
+            total_amount: total,
+            notes: invoiceData.notes,
+            payment_method: invoiceData.payment_method,
+            payment_account_id: invoiceData.payment_account_id || null,
+            cheque_id: invoiceData.cheque_id || null,
+            status,
+          })
+          .eq('id', invoiceId)
+          .select()
+          .single();
+        if (updateError) throw updateError;
+        invoice = updated;
 
-      if (invoiceError) throw invoiceError;
+        // Replace items
+        const { error: delError } = await supabase
+          .from('sales_invoice_items')
+          .delete()
+          .eq('sales_invoice_id', invoiceId);
+        if (delError) throw delError;
+      } else {
+        const { data: created, error: invoiceError } = await supabase
+          .from('sales_invoices')
+          .insert({
+            customer_id: invoiceData.customer_id,
+            user_id: user?.id,
+            route_id: activeSession?.route_id || null,
+            session_id: activeSession?.id || null,
+            invoice_number: invoiceData.invoiceNumber,
+            invoice_date: invoiceData.invoiceDate,
+            due_date: invoiceData.dueDate || null,
+            subtotal,
+            tax_amount: taxAmount,
+            total_amount: total,
+            notes: invoiceData.notes,
+            payment_method: invoiceData.payment_method,
+            payment_account_id: invoiceData.payment_account_id || null,
+            cheque_id: invoiceData.cheque_id || null,
+            status
+          })
+          .select()
+          .single();
+        if (invoiceError) throw invoiceError;
+        invoice = created;
+      }
 
       // Create invoice items
       const invoiceItems = validItems.map(item => ({
@@ -371,7 +450,9 @@ export function InvoiceForm({ onClose, onSuccess }: InvoiceFormProps) {
 
       toast({
         title: "Success",
-        description: `Invoice ${status === 'draft' ? 'saved as draft' : 'created and sent'}`,
+        description: isEditMode
+          ? "Invoice updated successfully"
+          : `Invoice ${status === 'draft' ? 'saved as draft' : 'created and sent'}`,
       });
       
       onSuccess?.();
@@ -424,8 +505,8 @@ export function InvoiceForm({ onClose, onSuccess }: InvoiceFormProps) {
     <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-xl md:text-2xl font-bold">Create Invoice</h2>
-          <p className="text-muted-foreground">Create a new sales invoice</p>
+          <h2 className="text-xl md:text-2xl font-bold">{isEditMode ? "Edit Invoice" : "Create Invoice"}</h2>
+          <p className="text-muted-foreground">{isEditMode ? "Update this sales invoice" : "Create a new sales invoice"}</p>
         </div>
       </div>
 
@@ -795,7 +876,7 @@ export function InvoiceForm({ onClose, onSuccess }: InvoiceFormProps) {
             disabled={isLoading}
           >
             <Send className="h-4 w-4 mr-2" />
-            {isLoading ? "Creating..." : "Create Invoice"}
+            {isLoading ? (isEditMode ? "Updating..." : "Creating...") : (isEditMode ? "Update Invoice" : "Create Invoice")}
           </Button>
         </div>
       </div>
