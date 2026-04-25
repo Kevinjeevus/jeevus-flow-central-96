@@ -154,13 +154,20 @@ serve(async (req) => {
       )
     }
 
+    // Map sector to valid profile role
+    // profiles.role CHECK constraint allows: admin, employee, manager, salesman, accountant, marketing, manufacturing, hr, sales
+    const sectorToProfileRole = (s: string): string => {
+      const validRoles = ['admin', 'employee', 'manager', 'salesman', 'accountant', 'marketing', 'manufacturing', 'hr', 'sales'];
+      return validRoles.includes(s) ? s : 'employee';
+    };
+
     // Create profile record
     const { error: profileError } = await supabaseAdmin.from("profiles").insert({
       user_id: authData.user.id,
       full_name,
       email,
       phone,
-      role: sector === "admin" ? "admin" : sector,
+      role: sectorToProfileRole(sector),
     })
 
     if (profileError) {
