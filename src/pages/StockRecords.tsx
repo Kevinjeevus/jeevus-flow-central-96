@@ -16,6 +16,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { InvoicePreview } from "@/components/InvoicePreview";
 
 interface StockTransaction {
   id: string;
@@ -28,10 +29,17 @@ interface StockTransaction {
   previous_stock: number;
   new_stock: number;
   created_at: string;
+  reference_type?: string | null;
+  reference_id?: string | null;
   products?: {
     name: string;
     sku: string;
     unit: string;
+  } | null;
+  invoice?: {
+    id: string;
+    invoice_number: string;
+    customer_name: string;
   } | null;
 }
 
@@ -46,6 +54,8 @@ export default function StockRecords() {
   const [editBatchNumber, setEditBatchNumber] = useState("");
   const [sortBy, setSortBy] = useState<'date' | 'product'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+  const [showInvoicePreview, setShowInvoicePreview] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -71,9 +81,39 @@ export default function StockRecords() {
         console.error('Stock transactions fetch error:', error);
         throw error;
       }
-      
-      console.log('Fetched stock transactions:', data);
-      setTransactions((data as any) || []);
+
+      const rows = (data as any[]) || [];
+
+      // Collect linked sales_invoice ids and fetch invoice + customer info
+      const invoiceIds = Array.from(new Set(
+        rows
+          .filter(r => r.reference_type === 'sales_invoice' && r.reference_id)
+          .map(r => r.reference_id as string)
+      ));
+
+      let invoicesById: Record<string, { id: string; invoice_number: string; customer_name: string }> = {};
+      if (invoiceIds.length > 0) {
+        const { data: invoices } = await supabase
+          .from('sales_invoices')
+          .select('id, invoice_number, customers(name)')
+          .in('id', invoiceIds);
+        (invoices || []).forEach((inv: any) => {
+          invoicesById[inv.id] = {
+            id: inv.id,
+            invoice_number: inv.invoice_number,
+            customer_name: inv.customers?.name || '-',
+          };
+        });
+      }
+
+      const enriched = rows.map(r => ({
+        ...r,
+        invoice: r.reference_type === 'sales_invoice' && r.reference_id
+          ? invoicesById[r.reference_id] || null
+          : null,
+      }));
+
+      setTransactions(enriched);
     } catch (error) {
       console.error('Error fetching stock transactions:', error);
       toast({
@@ -83,6 +123,76 @@ export default function StockRecords() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleViewInvoice = async (invoiceId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('sales_invoices')
+        .select(`
+          *,
+          customers (name, email, phone, address, gstin),
+          sales_invoice_items (
+            *,
+            products (name, hsn_code, gst_rate, unit)
+          )
+        `)
+        .eq('id', invoiceId)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) {
+        toast({ title: "Error", description: "Invoice not found", variant: "destructive" });
+        return;
+      }
+
+      let bankAccount = null;
+      if (data.payment_account_id) {
+        const { data: accountData } = await supabase
+          .from('accounts')
+          .select('account_name, account_number, bank_name, ifsc_code, account_holder_name')
+          .eq('id', data.payment_account_id)
+          .maybeSingle();
+        bankAccount = accountData;
+      }
+
+      const invoiceForPreview = {
+        id: data.id,
+        invoice_number: data.invoice_number,
+        invoice_date: data.invoice_date,
+        payment_method: data.payment_method,
+        customer: {
+          name: (data as any).customers?.name,
+          email: (data as any).customers?.email,
+          phone: (data as any).customers?.phone,
+          address: (data as any).customers?.address,
+          gstin: (data as any).customers?.gstin,
+        },
+        items: ((data as any).sales_invoice_items || []).map((item: any) => ({
+          product_name: item.products?.name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total_price: item.total_price,
+          hsn_code: item.products?.hsn_code,
+          gst_rate: item.products?.gst_rate,
+          unit: item.products?.unit,
+        })),
+        subtotal: data.subtotal,
+        tax_amount: data.tax_amount,
+        total_amount: data.total_amount,
+        notes: data.notes,
+        bank_account: bankAccount,
+      };
+
+      setSelectedInvoice(invoiceForPreview);
+      setShowInvoicePreview(true);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to load invoice",
+        variant: "destructive",
+      });
     }
   };
 
@@ -279,55 +389,82 @@ export default function StockRecords() {
                   <TableHead>Product</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Quantity</TableHead>
+                  <TableHead>Party</TableHead>
+                  <TableHead>Invoice</TableHead>
                   <TableHead>Batch No.</TableHead>
-                  <TableHead>Description</TableHead>
                   <TableHead>Stock Change</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTransactions.map((transaction) => (
-                  <TableRow key={transaction.id}>
-                    <TableCell>{format(new Date(transaction.transaction_date), 'dd/MM/yyyy')}</TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{transaction.products?.name}</div>
-                        <div className="text-sm text-muted-foreground">{transaction.products?.sku}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={transaction.transaction_type === 'add' ? 'default' : 'destructive'}>
-                        {transaction.transaction_type === 'add' ? 'Added' : 'Reduced'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{transaction.quantity} {transaction.products?.unit}</TableCell>
-                    <TableCell>{transaction.batch_number || '-'}</TableCell>
-                    <TableCell className="max-w-xs truncate">{transaction.description || '-'}</TableCell>
-                    <TableCell>
-                      <span className={transaction.transaction_type === 'add' ? 'text-green-600' : 'text-red-600'}>
-                        {transaction.previous_stock} → {transaction.new_stock}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleEdit(transaction)}
-                        >
-                          <Edit2 className="h-3 w-3" />
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleDelete(transaction.id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {filteredTransactions.map((transaction) => {
+                  const isSaleType = ['sale', 'sale_adjust', 'sale_revert'].includes(transaction.transaction_type);
+                  const isReduce = transaction.transaction_type === 'sale' || transaction.transaction_type === 'reduce'
+                    || (transaction.transaction_type === 'sale_adjust' && transaction.quantity > 0);
+                  const clickable = !!transaction.invoice;
+                  return (
+                    <TableRow
+                      key={transaction.id}
+                      className={clickable ? "cursor-pointer" : undefined}
+                      onClick={clickable ? () => handleViewInvoice(transaction.invoice!.id) : undefined}
+                    >
+                      <TableCell>{format(new Date(transaction.transaction_date), 'dd/MM/yyyy')}</TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{transaction.products?.name}</div>
+                          <div className="text-sm text-muted-foreground">{transaction.products?.sku}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={isReduce ? 'destructive' : 'default'}>
+                          {transaction.transaction_type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{transaction.quantity} {transaction.products?.unit}</TableCell>
+                      <TableCell>{transaction.invoice?.customer_name || '-'}</TableCell>
+                      <TableCell>
+                        {transaction.invoice ? (
+                          <button
+                            type="button"
+                            className="text-primary hover:underline font-medium"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewInvoice(transaction.invoice!.id);
+                            }}
+                          >
+                            {transaction.invoice.invoice_number}
+                          </button>
+                        ) : (
+                          '-'
+                        )}
+                      </TableCell>
+                      <TableCell>{transaction.batch_number || '-'}</TableCell>
+                      <TableCell>
+                        <span className={isReduce ? 'text-red-600' : 'text-green-600'}>
+                          {transaction.previous_stock} → {transaction.new_stock}
+                        </span>
+                      </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEdit(transaction)}
+                          >
+                            <Edit2 className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDelete(transaction.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
@@ -405,6 +542,19 @@ export default function StockRecords() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Invoice Preview */}
+      {selectedInvoice && (
+        <InvoicePreview
+          isOpen={showInvoicePreview}
+          onClose={() => {
+            setShowInvoicePreview(false);
+            setSelectedInvoice(null);
+          }}
+          invoiceData={selectedInvoice}
+          onRefresh={fetchTransactions}
+        />
+      )}
     </div>
   );
 }
