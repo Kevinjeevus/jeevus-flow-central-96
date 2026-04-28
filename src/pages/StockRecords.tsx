@@ -248,9 +248,37 @@ export default function StockRecords() {
   };
 
   const handleDelete = async (transactionId: string) => {
-    if (!confirm("Are you sure you want to delete this stock transaction?")) return;
+    if (!confirm("Are you sure you want to delete this stock transaction? The product stock will be adjusted accordingly.")) return;
 
     try {
+      // Find the transaction to reverse its stock effect
+      const transaction = transactions.find(t => t.id === transactionId);
+      if (!transaction) return;
+
+      // Determine how to reverse: if stock was added, subtract it back; if reduced, add it back
+      const isAddType = ['add', 'purchase'].includes(transaction.transaction_type);
+      const reverseQty = isAddType ? -transaction.quantity : transaction.quantity;
+
+      // Get current product stock and adjust
+      const { data: product, error: fetchError } = await supabase
+        .from("products")
+        .select("stock_quantity")
+        .eq("id", transaction.product_id)
+        .maybeSingle();
+
+      if (fetchError) throw fetchError;
+
+      if (product) {
+        const newStock = (product.stock_quantity || 0) + reverseQty;
+        const { error: updateError } = await supabase
+          .from("products")
+          .update({ stock_quantity: newStock, updated_at: new Date().toISOString() })
+          .eq("id", transaction.product_id);
+
+        if (updateError) throw updateError;
+      }
+
+      // Now delete the transaction record
       const { error } = await supabase
         .from("stock_transactions")
         .delete()
@@ -262,7 +290,7 @@ export default function StockRecords() {
       
       toast({
         title: "Success",
-        description: "Stock transaction deleted successfully",
+        description: "Stock transaction deleted and product stock adjusted",
       });
     } catch (error) {
       toast({
@@ -417,7 +445,7 @@ export default function StockRecords() {
                       </TableCell>
                       <TableCell>
                         <Badge variant={isReduce ? 'destructive' : 'default'}>
-                          {transaction.transaction_type}
+                          {{ add: 'Added', reduce: 'Reduced', sale: 'Sale', sale_adjust: 'Sale Adjusted', sale_revert: 'Sale Reverted', purchase: 'Purchase', purchase_return: 'Purchase Return', adjustment: 'Adjustment' }[transaction.transaction_type] || transaction.transaction_type}
                         </Badge>
                       </TableCell>
                       <TableCell>{transaction.quantity} {transaction.products?.unit}</TableCell>

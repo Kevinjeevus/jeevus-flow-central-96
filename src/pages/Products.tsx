@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Plus, Search, Filter, Edit, Trash2, Package, AlertTriangle, ClipboardList } from "lucide-react";
-import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 
 
 interface Product {
@@ -257,6 +257,65 @@ export default function Products() {
       });
     } finally {
       setStockLoading(false);
+    }
+  };
+
+  const handleDeleteStockRecord = async (transaction: StockTransaction) => {
+    if (!confirm("Are you sure you want to delete this stock record? The product stock will be adjusted accordingly.")) return;
+
+    try {
+      // Determine how to reverse: if stock was added, subtract it back; if reduced/sold, add it back
+      const isAddType = ['add', 'purchase'].includes(transaction.transaction_type);
+      const reverseQty = isAddType ? -transaction.quantity : transaction.quantity;
+
+      // Get current product stock and adjust
+      const { data: product, error: fetchError } = await supabase
+        .from("products")
+        .select("stock_quantity")
+        .eq("id", transaction.product_id)
+        .maybeSingle();
+
+      if (fetchError) throw fetchError;
+
+      if (product) {
+        const newStock = (product.stock_quantity || 0) + reverseQty;
+        const { error: updateError } = await supabase
+          .from("products")
+          .update({ stock_quantity: newStock, updated_at: new Date().toISOString() })
+          .eq("id", transaction.product_id);
+
+        if (updateError) throw updateError;
+
+        // Update selectedProduct in the dialog header
+        if (selectedProduct) {
+          setSelectedProduct({ ...selectedProduct, stock_quantity: newStock });
+        }
+      }
+
+      // Delete the transaction record
+      const { error } = await supabase
+        .from("stock_transactions")
+        .delete()
+        .eq("id", transaction.id);
+
+      if (error) throw error;
+
+      // Update local stock transactions list
+      setStockTransactions(prev => prev.filter(t => t.id !== transaction.id));
+
+      // Refresh the products list so stock_quantity is updated everywhere
+      fetchProducts();
+
+      toast({
+        title: "Success",
+        description: "Stock record deleted and product stock adjusted",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete stock record",
+        variant: "destructive",
+      });
     }
   };
 
@@ -777,27 +836,51 @@ export default function Products() {
                     <TableHead>Batch No.</TableHead>
                     <TableHead>Description</TableHead>
                     <TableHead>Stock Change</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {stockTransactions.map((t) => (
+                  {stockTransactions.map((t) => {
+                    const isAddType = ['add', 'purchase'].includes(t.transaction_type);
+                    const typeLabel = {
+                      add: 'Added',
+                      reduce: 'Reduced',
+                      sale: 'Sale',
+                      sale_adjust: 'Sale Adjusted',
+                      sale_revert: 'Sale Reverted',
+                      purchase: 'Purchase',
+                      purchase_return: 'Purchase Return',
+                      adjustment: 'Adjustment',
+                    }[t.transaction_type] || t.transaction_type;
+                    return (
                     <TableRow key={t.id}>
                       <TableCell>{format(new Date(t.transaction_date), 'dd/MM/yyyy')}</TableCell>
                       <TableCell>
-                        <Badge variant={t.transaction_type === 'add' ? 'default' : 'destructive'}>
-                          {t.transaction_type === 'add' ? 'Added' : 'Reduced'}
+                        <Badge variant={isAddType ? 'default' : 'destructive'}>
+                          {typeLabel}
                         </Badge>
                       </TableCell>
                       <TableCell>{t.quantity} {selectedProduct?.unit}</TableCell>
                       <TableCell>{t.batch_number || '-'}</TableCell>
                       <TableCell className="max-w-[200px] truncate">{t.description || '-'}</TableCell>
                       <TableCell>
-                        <span className={t.transaction_type === 'add' ? 'text-green-600' : 'text-red-600'}>
+                        <span className={isAddType ? 'text-green-600' : 'text-red-600'}>
                           {t.previous_stock} → {t.new_stock}
                         </span>
                       </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteStockRecord(t)}
+                          title="Delete this stock record"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}
