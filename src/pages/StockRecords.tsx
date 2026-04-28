@@ -81,9 +81,39 @@ export default function StockRecords() {
         console.error('Stock transactions fetch error:', error);
         throw error;
       }
-      
-      console.log('Fetched stock transactions:', data);
-      setTransactions((data as any) || []);
+
+      const rows = (data as any[]) || [];
+
+      // Collect linked sales_invoice ids and fetch invoice + customer info
+      const invoiceIds = Array.from(new Set(
+        rows
+          .filter(r => r.reference_type === 'sales_invoice' && r.reference_id)
+          .map(r => r.reference_id as string)
+      ));
+
+      let invoicesById: Record<string, { id: string; invoice_number: string; customer_name: string }> = {};
+      if (invoiceIds.length > 0) {
+        const { data: invoices } = await supabase
+          .from('sales_invoices')
+          .select('id, invoice_number, customers(name)')
+          .in('id', invoiceIds);
+        (invoices || []).forEach((inv: any) => {
+          invoicesById[inv.id] = {
+            id: inv.id,
+            invoice_number: inv.invoice_number,
+            customer_name: inv.customers?.name || '-',
+          };
+        });
+      }
+
+      const enriched = rows.map(r => ({
+        ...r,
+        invoice: r.reference_type === 'sales_invoice' && r.reference_id
+          ? invoicesById[r.reference_id] || null
+          : null,
+      }));
+
+      setTransactions(enriched);
     } catch (error) {
       console.error('Error fetching stock transactions:', error);
       toast({
@@ -93,6 +123,76 @@ export default function StockRecords() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleViewInvoice = async (invoiceId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('sales_invoices')
+        .select(`
+          *,
+          customers (name, email, phone, address, gstin),
+          sales_invoice_items (
+            *,
+            products (name, hsn_code, gst_rate, unit)
+          )
+        `)
+        .eq('id', invoiceId)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) {
+        toast({ title: "Error", description: "Invoice not found", variant: "destructive" });
+        return;
+      }
+
+      let bankAccount = null;
+      if (data.payment_account_id) {
+        const { data: accountData } = await supabase
+          .from('accounts')
+          .select('account_name, account_number, bank_name, ifsc_code, account_holder_name')
+          .eq('id', data.payment_account_id)
+          .maybeSingle();
+        bankAccount = accountData;
+      }
+
+      const invoiceForPreview = {
+        id: data.id,
+        invoice_number: data.invoice_number,
+        invoice_date: data.invoice_date,
+        payment_method: data.payment_method,
+        customer: {
+          name: (data as any).customers?.name,
+          email: (data as any).customers?.email,
+          phone: (data as any).customers?.phone,
+          address: (data as any).customers?.address,
+          gstin: (data as any).customers?.gstin,
+        },
+        items: ((data as any).sales_invoice_items || []).map((item: any) => ({
+          product_name: item.products?.name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total_price: item.total_price,
+          hsn_code: item.products?.hsn_code,
+          gst_rate: item.products?.gst_rate,
+          unit: item.products?.unit,
+        })),
+        subtotal: data.subtotal,
+        tax_amount: data.tax_amount,
+        total_amount: data.total_amount,
+        notes: data.notes,
+        bank_account: bankAccount,
+      };
+
+      setSelectedInvoice(invoiceForPreview);
+      setShowInvoicePreview(true);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to load invoice",
+        variant: "destructive",
+      });
     }
   };
 
