@@ -54,6 +54,8 @@ export default function StockRecords() {
   const [editBatchNumber, setEditBatchNumber] = useState("");
   const [sortBy, setSortBy] = useState<'date' | 'product'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+  const [showInvoicePreview, setShowInvoicePreview] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
