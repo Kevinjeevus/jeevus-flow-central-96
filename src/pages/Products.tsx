@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, Filter, Edit, Trash2, Package, AlertTriangle } from "lucide-react";
+import { Plus, Search, Filter, Edit, Trash2, Package, AlertTriangle, ClipboardList } from "lucide-react";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,6 +30,18 @@ interface Product {
   gst_rate?: number;
 }
 
+interface StockTransaction {
+  id: string;
+  product_id: string;
+  transaction_type: string;
+  quantity: number;
+  batch_number?: string | null;
+  description?: string | null;
+  transaction_date: string;
+  previous_stock: number;
+  new_stock: number;
+}
+
 export default function Products() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,7 +49,10 @@ export default function Products() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showStockDialog, setShowStockDialog] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [stockTransactions, setStockTransactions] = useState<StockTransaction[]>([]);
+  const [stockLoading, setStockLoading] = useState(false);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -217,6 +233,30 @@ export default function Products() {
         description: error.message,
         variant: "destructive",
       });
+    }
+  };
+
+  const fetchStockRecords = async (product: Product) => {
+    setSelectedProduct(product);
+    setShowStockDialog(true);
+    setStockLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("stock_transactions")
+        .select("*")
+        .eq("product_id", product.id)
+        .order("transaction_date", { ascending: false });
+
+      if (error) throw error;
+      setStockTransactions(data || []);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load stock records",
+        variant: "destructive",
+      });
+    } finally {
+      setStockLoading(false);
     }
   };
 
@@ -513,6 +553,14 @@ export default function Products() {
                         <Button 
                           variant="ghost" 
                           size="sm"
+                          title="View Stock Records"
+                          onClick={() => fetchStockRecords(product)}
+                        >
+                          <ClipboardList className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
                           onClick={() => handleEdit(product)}
                         >
                           <Edit className="h-4 w-4" />
@@ -695,6 +743,64 @@ export default function Products() {
             <Button variant="destructive" onClick={handleDelete}>
               Delete
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Stock Records Dialog */}
+      <Dialog open={showStockDialog} onOpenChange={setShowStockDialog}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ClipboardList className="h-5 w-5" />
+              Stock Records — {selectedProduct?.name}
+            </DialogTitle>
+            <DialogDescription>
+              SKU: {selectedProduct?.sku} · Current Stock: {selectedProduct?.stock_quantity} {selectedProduct?.unit}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="overflow-auto flex-1">
+            {stockLoading ? (
+              <div className="text-center py-8 text-muted-foreground">Loading stock records...</div>
+            ) : stockTransactions.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No stock transactions found for this product</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Quantity</TableHead>
+                    <TableHead>Batch No.</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Stock Change</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {stockTransactions.map((t) => (
+                    <TableRow key={t.id}>
+                      <TableCell>{format(new Date(t.transaction_date), 'dd/MM/yyyy')}</TableCell>
+                      <TableCell>
+                        <Badge variant={t.transaction_type === 'add' ? 'default' : 'destructive'}>
+                          {t.transaction_type === 'add' ? 'Added' : 'Reduced'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{t.quantity} {selectedProduct?.unit}</TableCell>
+                      <TableCell>{t.batch_number || '-'}</TableCell>
+                      <TableCell className="max-w-[200px] truncate">{t.description || '-'}</TableCell>
+                      <TableCell>
+                        <span className={t.transaction_type === 'add' ? 'text-green-600' : 'text-red-600'}>
+                          {t.previous_stock} → {t.new_stock}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </div>
         </DialogContent>
       </Dialog>
