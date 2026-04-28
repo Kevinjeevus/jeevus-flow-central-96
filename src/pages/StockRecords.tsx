@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Search, Filter, FileText, Edit2, Trash2, Package, Calendar, ArrowUpDown } from "lucide-react";
+import { Search, Filter, FileText, Edit2, Trash2, Package, Calendar, ArrowUpDown, CheckSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -56,6 +56,7 @@ export default function StockRecords() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [showInvoicePreview, setShowInvoicePreview] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   useEffect(() => {
@@ -326,6 +327,99 @@ export default function StockRecords() {
     }
   };
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredTransactions.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredTransactions.map(t => t.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selectedIds.size} stock transaction(s)? Product stocks will be adjusted accordingly.`)) return;
+
+    try {
+      const toDelete = transactions.filter(t => selectedIds.has(t.id));
+      const affectedProductIds = new Set<string>();
+
+      for (const transaction of toDelete) {
+        const isAddType = ['add', 'purchase', 'opening_stock'].includes(transaction.transaction_type);
+        const reverseQty = isAddType ? -transaction.quantity : transaction.quantity;
+
+        const { data: product } = await supabase
+          .from("products")
+          .select("stock_quantity")
+          .eq("id", transaction.product_id)
+          .maybeSingle();
+
+        if (product) {
+          const newStock = (product.stock_quantity || 0) + reverseQty;
+          await supabase
+            .from("products")
+            .update({ stock_quantity: newStock, updated_at: new Date().toISOString() })
+            .eq("id", transaction.product_id);
+        }
+
+        await supabase
+          .from("stock_transactions")
+          .delete()
+          .eq("id", transaction.id);
+
+        affectedProductIds.add(transaction.product_id);
+      }
+
+      // Recalculate the stock chain for each affected product
+      for (const productId of affectedProductIds) {
+        const { data: remaining } = await supabase
+          .from("stock_transactions")
+          .select("id, previous_stock, new_stock")
+          .eq("product_id", productId)
+          .order("transaction_date", { ascending: true })
+          .order("created_at", { ascending: true });
+
+        if (remaining && remaining.length > 0) {
+          let runningStock = 0;
+          for (const t of remaining) {
+            const delta = t.new_stock - t.previous_stock;
+            const correctedPrev = runningStock;
+            const correctedNew = runningStock + delta;
+            if (t.previous_stock !== correctedPrev || t.new_stock !== correctedNew) {
+              await supabase
+                .from("stock_transactions")
+                .update({ previous_stock: correctedPrev, new_stock: correctedNew })
+                .eq("id", t.id);
+            }
+            runningStock = correctedNew;
+          }
+        }
+      }
+
+      setSelectedIds(new Set());
+      fetchTransactions();
+
+      toast({
+        title: "Success",
+        description: `${toDelete.length} stock transaction(s) deleted and stocks adjusted`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete stock transactions",
+        variant: "destructive",
+      });
+    }
+  };
+
   const filteredTransactions = transactions.filter(transaction =>
     transaction.products?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     transaction.products?.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -413,6 +507,15 @@ export default function StockRecords() {
           <ArrowUpDown className="h-4 w-4 mr-2" />
           {sortOrder === 'asc' ? 'Ascending' : 'Descending'}
         </Button>
+        {selectedIds.size > 0 && (
+          <Button 
+            variant="destructive"
+            onClick={handleBulkDelete}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete Selected ({selectedIds.size})
+          </Button>
+        )}
       </div>
 
       {/* Transactions Table */}
@@ -438,6 +541,14 @@ export default function StockRecords() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <input
+                      type="checkbox"
+                      className="rounded border-gray-300"
+                      checked={filteredTransactions.length > 0 && selectedIds.size === filteredTransactions.length}
+                      onChange={toggleSelectAll}
+                    />
+                  </TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Product</TableHead>
                   <TableHead>Type</TableHead>
@@ -456,9 +567,17 @@ export default function StockRecords() {
                   return (
                     <TableRow
                       key={transaction.id}
-                      className={clickable ? "cursor-pointer" : undefined}
+                      className={`${clickable ? "cursor-pointer" : ""} ${selectedIds.has(transaction.id) ? "bg-muted/50" : ""}`}
                       onClick={clickable ? () => handleViewInvoice(transaction.invoice!.id) : undefined}
                     >
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          className="rounded border-gray-300"
+                          checked={selectedIds.has(transaction.id)}
+                          onChange={() => toggleSelect(transaction.id)}
+                        />
+                      </TableCell>
                       <TableCell>{format(new Date(transaction.transaction_date), 'dd/MM/yyyy')}</TableCell>
                       <TableCell>
                         <div>

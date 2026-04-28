@@ -210,18 +210,72 @@ export default function Products() {
 
       if (error) throw error;
 
-      // If opening stock changed, create a stock transaction to track the adjustment
+      // If opening stock changed, update/create the opening_stock transaction and recalculate the chain
       if (stockDelta !== 0) {
-        await supabase.from("stock_transactions").insert({
-          product_id: selectedProduct.id,
-          transaction_type: 'opening_stock',
-          quantity: Math.abs(stockDelta),
-          previous_stock: oldStock,
-          new_stock: newOpeningStock,
-          description: stockDelta > 0 ? 'Opening Stock increased' : 'Opening Stock decreased',
-          transaction_date: format(new Date(), 'yyyy-MM-dd'),
-          created_by: (await supabase.auth.getUser()).data.user?.id,
-        });
+        // Check if an opening_stock transaction already exists for this product
+        const { data: existingOpening } = await supabase
+          .from("stock_transactions")
+          .select("id, quantity, previous_stock, new_stock")
+          .eq("product_id", selectedProduct.id)
+          .eq("transaction_type", "opening_stock")
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        if (existingOpening) {
+          // Update the existing opening stock transaction
+          const newOpeningQty = existingOpening.quantity + stockDelta;
+          await supabase
+            .from("stock_transactions")
+            .update({
+              quantity: newOpeningQty,
+              new_stock: newOpeningQty,
+              description: 'Opening Stock',
+            })
+            .eq("id", existingOpening.id);
+        } else {
+          // Create a new opening stock transaction
+          await supabase.from("stock_transactions").insert({
+            product_id: selectedProduct.id,
+            transaction_type: 'opening_stock',
+            quantity: newOpeningStock,
+            previous_stock: 0,
+            new_stock: newOpeningStock,
+            description: 'Opening Stock',
+            transaction_date: format(new Date(), 'yyyy-MM-dd'),
+            created_by: (await supabase.auth.getUser()).data.user?.id,
+          });
+        }
+
+        // Recalculate the stock chain for all transactions of this product
+        const { data: allTransactions } = await supabase
+          .from("stock_transactions")
+          .select("id, previous_stock, new_stock")
+          .eq("product_id", selectedProduct.id)
+          .order("transaction_date", { ascending: true })
+          .order("created_at", { ascending: true });
+
+        if (allTransactions && allTransactions.length > 0) {
+          let runningStock = 0;
+          for (const t of allTransactions) {
+            const delta = t.new_stock - t.previous_stock;
+            const correctedPrev = runningStock;
+            const correctedNew = runningStock + delta;
+            if (t.previous_stock !== correctedPrev || t.new_stock !== correctedNew) {
+              await supabase
+                .from("stock_transactions")
+                .update({ previous_stock: correctedPrev, new_stock: correctedNew })
+                .eq("id", t.id);
+            }
+            runningStock = correctedNew;
+          }
+
+          // Update the product's stock_quantity to match the final chain value
+          await supabase
+            .from("products")
+            .update({ stock_quantity: runningStock })
+            .eq("id", selectedProduct.id);
+        }
       }
 
       toast({
