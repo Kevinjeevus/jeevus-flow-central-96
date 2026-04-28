@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Search, Filter, FileText, Edit2, Trash2, Package, Calendar, ArrowUpDown, CheckSquare } from "lucide-react";
+import { Search, Filter, FileText, Edit2, Trash2, Package, Calendar, ArrowUpDown, CheckSquare, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +57,7 @@ export default function StockRecords() {
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [showInvoicePreview, setShowInvoicePreview] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [syncing, setSyncing] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -428,8 +429,137 @@ export default function StockRecords() {
   );
 
   const totalTransactions = transactions.length;
-  const addTransactions = transactions.filter(t => t.transaction_type === 'add').length;
-  const reduceTransactions = transactions.filter(t => t.transaction_type === 'reduce').length;
+  const addTransactions = transactions.filter(t => t.transaction_type === 'add' || t.transaction_type === 'opening_stock').length;
+  const reduceTransactions = transactions.filter(t => ['reduce', 'sale', 'sale_adjust', 'purchase_return'].includes(t.transaction_type)).length;
+
+  const handleSyncVerify = async () => {
+    setSyncing(true);
+    let created = 0;
+    let chainFixed = 0;
+    let stockMismatches = 0;
+
+    try {
+      // 1. Get all products
+      const { data: allProducts, error: prodErr } = await supabase
+        .from("products")
+        .select("id, name, stock_quantity");
+
+      if (prodErr) throw prodErr;
+      if (!allProducts) { setSyncing(false); return; }
+
+      for (const product of allProducts) {
+        // 2. Get all transactions for this product, chronologically
+        const { data: txns } = await supabase
+          .from("stock_transactions")
+          .select("id, transaction_type, quantity, previous_stock, new_stock")
+          .eq("product_id", product.id)
+          .order("transaction_date", { ascending: true })
+          .order("created_at", { ascending: true });
+
+        // 3. If product has stock but no transactions at all, create an opening stock record
+        if ((!txns || txns.length === 0) && (product.stock_quantity || 0) > 0) {
+          await supabase.from("stock_transactions").insert({
+            product_id: product.id,
+            transaction_type: 'opening_stock',
+            quantity: product.stock_quantity,
+            previous_stock: 0,
+            new_stock: product.stock_quantity,
+            description: 'Opening Stock (auto-synced)',
+            transaction_date: new Date().toISOString().split('T')[0],
+          });
+          created++;
+          continue; // chain is correct for single record
+        }
+
+        if (!txns || txns.length === 0) continue;
+
+        // 4. Check if there's an opening_stock transaction — if not and first record starts > 0, create one
+        const hasOpening = txns.some(t => t.transaction_type === 'opening_stock');
+        if (!hasOpening) {
+          const firstTxn = txns[0];
+          if (firstTxn.previous_stock > 0) {
+            // Insert an opening stock record before everything
+            const { data: earliestTxn } = await supabase
+              .from("stock_transactions")
+              .select("transaction_date")
+              .eq("product_id", product.id)
+              .order("transaction_date", { ascending: true })
+              .limit(1)
+              .maybeSingle();
+
+            await supabase.from("stock_transactions").insert({
+              product_id: product.id,
+              transaction_type: 'opening_stock',
+              quantity: firstTxn.previous_stock,
+              previous_stock: 0,
+              new_stock: firstTxn.previous_stock,
+              description: 'Opening Stock (auto-synced)',
+              transaction_date: earliestTxn?.transaction_date || new Date().toISOString().split('T')[0],
+            });
+            created++;
+          }
+        }
+
+        // 5. Re-fetch after possible insert and recalculate chain
+        const { data: refreshedTxns } = await supabase
+          .from("stock_transactions")
+          .select("id, previous_stock, new_stock")
+          .eq("product_id", product.id)
+          .order("transaction_date", { ascending: true })
+          .order("created_at", { ascending: true });
+
+        if (refreshedTxns && refreshedTxns.length > 0) {
+          let runningStock = 0;
+          let hadFix = false;
+          for (const t of refreshedTxns) {
+            const delta = t.new_stock - t.previous_stock;
+            const correctedPrev = runningStock;
+            const correctedNew = runningStock + delta;
+            if (t.previous_stock !== correctedPrev || t.new_stock !== correctedNew) {
+              await supabase
+                .from("stock_transactions")
+                .update({ previous_stock: correctedPrev, new_stock: correctedNew })
+                .eq("id", t.id);
+              hadFix = true;
+            }
+            runningStock = correctedNew;
+          }
+          if (hadFix) chainFixed++;
+
+          // 6. Verify product stock matches final chain value
+          if (product.stock_quantity !== runningStock) {
+            await supabase
+              .from("products")
+              .update({ stock_quantity: runningStock })
+              .eq("id", product.id);
+            stockMismatches++;
+          }
+        }
+      }
+
+      fetchTransactions();
+
+      const messages = [];
+      if (created > 0) messages.push(`${created} opening stock record(s) created`);
+      if (chainFixed > 0) messages.push(`${chainFixed} product chain(s) corrected`);
+      if (stockMismatches > 0) messages.push(`${stockMismatches} product stock(s) fixed`);
+
+      toast({
+        title: messages.length > 0 ? "Sync & Verify Complete" : "All Records Verified ✓",
+        description: messages.length > 0
+          ? messages.join(', ')
+          : "All stock records are correct and in sync",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to sync & verify stock records",
+        variant: "destructive",
+      });
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -441,6 +571,14 @@ export default function StockRecords() {
             Track all stock adjustments and inventory movements
           </p>
         </div>
+        <Button 
+          variant="outline" 
+          onClick={handleSyncVerify}
+          disabled={syncing}
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+          {syncing ? 'Syncing...' : 'Sync & Verify'}
+        </Button>
       </div>
 
       {/* Stats Cards */}
