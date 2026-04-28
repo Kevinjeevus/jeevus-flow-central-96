@@ -311,18 +311,19 @@ export default function Products() {
 
       if (fetchError) throw fetchError;
 
+      let updatedStock = 0;
       if (product) {
-        const newStock = (product.stock_quantity || 0) + reverseQty;
+        updatedStock = (product.stock_quantity || 0) + reverseQty;
         const { error: updateError } = await supabase
           .from("products")
-          .update({ stock_quantity: newStock, updated_at: new Date().toISOString() })
+          .update({ stock_quantity: updatedStock, updated_at: new Date().toISOString() })
           .eq("id", transaction.product_id);
 
         if (updateError) throw updateError;
 
         // Update selectedProduct in the dialog header
         if (selectedProduct) {
-          setSelectedProduct({ ...selectedProduct, stock_quantity: newStock });
+          setSelectedProduct({ ...selectedProduct, stock_quantity: updatedStock });
         }
       }
 
@@ -334,8 +335,39 @@ export default function Products() {
 
       if (error) throw error;
 
-      // Update local stock transactions list
-      setStockTransactions(prev => prev.filter(t => t.id !== transaction.id));
+      // Recalculate the stock chain for all remaining transactions of this product
+      const { data: remaining } = await supabase
+        .from("stock_transactions")
+        .select("id, previous_stock, new_stock")
+        .eq("product_id", transaction.product_id)
+        .order("transaction_date", { ascending: true })
+        .order("created_at", { ascending: true });
+
+      if (remaining && remaining.length > 0) {
+        let runningStock = 0;
+        for (const t of remaining) {
+          const delta = t.new_stock - t.previous_stock; // preserve original delta
+          const correctedPrev = runningStock;
+          const correctedNew = runningStock + delta;
+          if (t.previous_stock !== correctedPrev || t.new_stock !== correctedNew) {
+            await supabase
+              .from("stock_transactions")
+              .update({ previous_stock: correctedPrev, new_stock: correctedNew })
+              .eq("id", t.id);
+          }
+          runningStock = correctedNew;
+        }
+      }
+
+      // Re-fetch stock records to show corrected chain values
+      if (selectedProduct) {
+        const { data: refreshed } = await supabase
+          .from("stock_transactions")
+          .select("*")
+          .eq("product_id", selectedProduct.id)
+          .order("transaction_date", { ascending: false });
+        setStockTransactions(refreshed || []);
+      }
 
       // Refresh the products list so stock_quantity is updated everywhere
       fetchProducts();

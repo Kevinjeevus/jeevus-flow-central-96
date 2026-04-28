@@ -286,7 +286,32 @@ export default function StockRecords() {
 
       if (error) throw error;
 
-      setTransactions(transactions.filter(t => t.id !== transactionId));
+      // Recalculate the stock chain for all remaining transactions of this product
+      const { data: remaining } = await supabase
+        .from("stock_transactions")
+        .select("id, previous_stock, new_stock")
+        .eq("product_id", transaction.product_id)
+        .order("transaction_date", { ascending: true })
+        .order("created_at", { ascending: true });
+
+      if (remaining && remaining.length > 0) {
+        let runningStock = 0;
+        for (const t of remaining) {
+          const delta = t.new_stock - t.previous_stock; // preserve original delta
+          const correctedPrev = runningStock;
+          const correctedNew = runningStock + delta;
+          if (t.previous_stock !== correctedPrev || t.new_stock !== correctedNew) {
+            await supabase
+              .from("stock_transactions")
+              .update({ previous_stock: correctedPrev, new_stock: correctedNew })
+              .eq("id", t.id);
+          }
+          runningStock = correctedNew;
+        }
+      }
+
+      // Re-fetch to get updated values
+      fetchTransactions();
       
       toast({
         title: "Success",
@@ -426,9 +451,7 @@ export default function StockRecords() {
               </TableHeader>
               <TableBody>
                 {filteredTransactions.map((transaction) => {
-                  const isSaleType = ['sale', 'sale_adjust', 'sale_revert'].includes(transaction.transaction_type);
-                  const isReduce = transaction.transaction_type === 'sale' || transaction.transaction_type === 'reduce'
-                    || (transaction.transaction_type === 'sale_adjust' && transaction.quantity > 0);
+                  const stockIncreased = transaction.new_stock >= transaction.previous_stock;
                   const clickable = !!transaction.invoice;
                   return (
                     <TableRow
@@ -444,7 +467,7 @@ export default function StockRecords() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={isReduce ? 'destructive' : 'default'}>
+                        <Badge variant={stockIncreased ? 'default' : 'destructive'}>
                           {{ add: 'Added', reduce: 'Reduced', sale: 'Sale', sale_adjust: 'Sale Adjusted', sale_revert: 'Sale Reverted', purchase: 'Purchase', purchase_return: 'Purchase Return', adjustment: 'Adjustment', opening_stock: 'Opening Stock' }[transaction.transaction_type] || transaction.transaction_type}
                         </Badge>
                       </TableCell>
@@ -468,7 +491,7 @@ export default function StockRecords() {
                       </TableCell>
                       <TableCell>{transaction.batch_number || '-'}</TableCell>
                       <TableCell>
-                        <span className={isReduce ? 'text-red-600' : 'text-green-600'}>
+                        <span className={stockIncreased ? 'text-green-600' : 'text-red-600'}>
                           {transaction.previous_stock} → {transaction.new_stock}
                         </span>
                       </TableCell>
