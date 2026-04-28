@@ -1823,6 +1823,8 @@ export type Database = {
           previous_stock: number
           product_id: string
           quantity: number
+          reference_id: string | null
+          reference_type: string | null
           transaction_date: string
           transaction_type: string
           updated_at: string
@@ -1837,6 +1839,8 @@ export type Database = {
           previous_stock: number
           product_id: string
           quantity: number
+          reference_id?: string | null
+          reference_type?: string | null
           transaction_date?: string
           transaction_type: string
           updated_at?: string
@@ -1851,6 +1855,8 @@ export type Database = {
           previous_stock?: number
           product_id?: string
           quantity?: number
+          reference_id?: string | null
+          reference_type?: string | null
           transaction_date?: string
           transaction_type?: string
           updated_at?: string
