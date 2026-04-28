@@ -113,7 +113,9 @@ export default function Products() {
     e.preventDefault();
     
     try {
-      const { error } = await supabase.from("products").insert([
+      const openingStock = parseInt(formData.stock_quantity) || 0;
+
+      const { data: inserted, error } = await supabase.from("products").insert([
         {
           name: formData.name,
           sku: formData.sku,
@@ -122,14 +124,28 @@ export default function Products() {
           sale_price: parseFloat(formData.sale_price),
           purchase_price: parseFloat(formData.purchase_price),
           mrp: formData.mrp ? parseFloat(formData.mrp) : null,
-          stock_quantity: parseInt(formData.stock_quantity) || 0,
+          stock_quantity: openingStock,
           min_stock_level: parseInt(formData.min_stock_level) || 0,
           hsn_code: formData.hsn_code || null,
           gst_rate: formData.gst_rate ? parseFloat(formData.gst_rate) : 0,
         },
-      ]);
+      ]).select('id').single();
 
       if (error) throw error;
+
+      // Create an opening stock transaction if opening stock > 0
+      if (openingStock > 0 && inserted) {
+        await supabase.from("stock_transactions").insert({
+          product_id: inserted.id,
+          transaction_type: 'opening_stock',
+          quantity: openingStock,
+          previous_stock: 0,
+          new_stock: openingStock,
+          description: 'Opening Stock',
+          transaction_date: format(new Date(), 'yyyy-MM-dd'),
+          created_by: (await supabase.auth.getUser()).data.user?.id,
+        });
+      }
 
       toast({
         title: "Success",
@@ -171,6 +187,10 @@ export default function Products() {
     if (!selectedProduct) return;
     
     try {
+      const newOpeningStock = parseInt(formData.stock_quantity) || 0;
+      const oldStock = selectedProduct.stock_quantity;
+      const stockDelta = newOpeningStock - oldStock;
+
       const { error } = await supabase
         .from("products")
         .update({
@@ -181,7 +201,7 @@ export default function Products() {
           sale_price: parseFloat(formData.sale_price),
           purchase_price: parseFloat(formData.purchase_price),
           mrp: formData.mrp ? parseFloat(formData.mrp) : null,
-          stock_quantity: parseInt(formData.stock_quantity) || 0,
+          stock_quantity: newOpeningStock,
           min_stock_level: parseInt(formData.min_stock_level) || 0,
           hsn_code: formData.hsn_code || null,
           gst_rate: formData.gst_rate ? parseFloat(formData.gst_rate) : 0,
@@ -189,6 +209,20 @@ export default function Products() {
         .eq("id", selectedProduct.id);
 
       if (error) throw error;
+
+      // If opening stock changed, create a stock transaction to track the adjustment
+      if (stockDelta !== 0) {
+        await supabase.from("stock_transactions").insert({
+          product_id: selectedProduct.id,
+          transaction_type: 'opening_stock',
+          quantity: Math.abs(stockDelta),
+          previous_stock: oldStock,
+          new_stock: newOpeningStock,
+          description: stockDelta > 0 ? 'Opening Stock increased' : 'Opening Stock decreased',
+          transaction_date: format(new Date(), 'yyyy-MM-dd'),
+          created_by: (await supabase.auth.getUser()).data.user?.id,
+        });
+      }
 
       toast({
         title: "Success",
@@ -265,7 +299,7 @@ export default function Products() {
 
     try {
       // Determine how to reverse: if stock was added, subtract it back; if reduced/sold, add it back
-      const isAddType = ['add', 'purchase'].includes(transaction.transaction_type);
+      const isAddType = ['add', 'purchase', 'opening_stock'].includes(transaction.transaction_type);
       const reverseQty = isAddType ? -transaction.quantity : transaction.quantity;
 
       // Get current product stock and adjust
@@ -438,7 +472,7 @@ export default function Products() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="stock_quantity">Stock Quantity</Label>
+                  <Label htmlFor="stock_quantity">Opening Stock</Label>
                   <Input
                     id="stock_quantity"
                     type="number"
@@ -736,7 +770,7 @@ export default function Products() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-stock_quantity">Stock Quantity</Label>
+                <Label htmlFor="edit-stock_quantity">Opening Stock</Label>
                 <Input
                   id="edit-stock_quantity"
                   type="number"
@@ -841,7 +875,7 @@ export default function Products() {
                 </TableHeader>
                 <TableBody>
                   {stockTransactions.map((t) => {
-                    const isAddType = ['add', 'purchase'].includes(t.transaction_type);
+                    const isAddType = ['add', 'purchase', 'opening_stock'].includes(t.transaction_type);
                     const typeLabel = {
                       add: 'Added',
                       reduce: 'Reduced',
@@ -851,6 +885,7 @@ export default function Products() {
                       purchase: 'Purchase',
                       purchase_return: 'Purchase Return',
                       adjustment: 'Adjustment',
+                      opening_stock: 'Opening Stock',
                     }[t.transaction_type] || t.transaction_type;
                     return (
                     <TableRow key={t.id}>

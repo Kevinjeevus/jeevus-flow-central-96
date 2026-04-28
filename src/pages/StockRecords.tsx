@@ -256,7 +256,7 @@ export default function StockRecords() {
       if (!transaction) return;
 
       // Determine how to reverse: if stock was added, subtract it back; if reduced, add it back
-      const isAddType = ['add', 'purchase'].includes(transaction.transaction_type);
+      const isAddType = ['add', 'purchase', 'opening_stock'].includes(transaction.transaction_type);
       const reverseQty = isAddType ? -transaction.quantity : transaction.quantity;
 
       // Get current product stock and adjust
@@ -445,7 +445,7 @@ export default function StockRecords() {
                       </TableCell>
                       <TableCell>
                         <Badge variant={isReduce ? 'destructive' : 'default'}>
-                          {{ add: 'Added', reduce: 'Reduced', sale: 'Sale', sale_adjust: 'Sale Adjusted', sale_revert: 'Sale Reverted', purchase: 'Purchase', purchase_return: 'Purchase Return', adjustment: 'Adjustment' }[transaction.transaction_type] || transaction.transaction_type}
+                          {{ add: 'Added', reduce: 'Reduced', sale: 'Sale', sale_adjust: 'Sale Adjusted', sale_revert: 'Sale Reverted', purchase: 'Purchase', purchase_return: 'Purchase Return', adjustment: 'Adjustment', opening_stock: 'Opening Stock' }[transaction.transaction_type] || transaction.transaction_type}
                         </Badge>
                       </TableCell>
                       <TableCell>{transaction.quantity} {transaction.products?.unit}</TableCell>
