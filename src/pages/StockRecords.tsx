@@ -389,55 +389,82 @@ export default function StockRecords() {
                   <TableHead>Product</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Quantity</TableHead>
+                  <TableHead>Party</TableHead>
+                  <TableHead>Invoice</TableHead>
                   <TableHead>Batch No.</TableHead>
-                  <TableHead>Description</TableHead>
                   <TableHead>Stock Change</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTransactions.map((transaction) => (
-                  <TableRow key={transaction.id}>
-                    <TableCell>{format(new Date(transaction.transaction_date), 'dd/MM/yyyy')}</TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{transaction.products?.name}</div>
-                        <div className="text-sm text-muted-foreground">{transaction.products?.sku}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={transaction.transaction_type === 'add' ? 'default' : 'destructive'}>
-                        {transaction.transaction_type === 'add' ? 'Added' : 'Reduced'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{transaction.quantity} {transaction.products?.unit}</TableCell>
-                    <TableCell>{transaction.batch_number || '-'}</TableCell>
-                    <TableCell className="max-w-xs truncate">{transaction.description || '-'}</TableCell>
-                    <TableCell>
-                      <span className={transaction.transaction_type === 'add' ? 'text-green-600' : 'text-red-600'}>
-                        {transaction.previous_stock} → {transaction.new_stock}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleEdit(transaction)}
-                        >
-                          <Edit2 className="h-3 w-3" />
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleDelete(transaction.id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {filteredTransactions.map((transaction) => {
+                  const isSaleType = ['sale', 'sale_adjust', 'sale_revert'].includes(transaction.transaction_type);
+                  const isReduce = transaction.transaction_type === 'sale' || transaction.transaction_type === 'reduce'
+                    || (transaction.transaction_type === 'sale_adjust' && transaction.quantity > 0);
+                  const clickable = !!transaction.invoice;
+                  return (
+                    <TableRow
+                      key={transaction.id}
+                      className={clickable ? "cursor-pointer" : undefined}
+                      onClick={clickable ? () => handleViewInvoice(transaction.invoice!.id) : undefined}
+                    >
+                      <TableCell>{format(new Date(transaction.transaction_date), 'dd/MM/yyyy')}</TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{transaction.products?.name}</div>
+                          <div className="text-sm text-muted-foreground">{transaction.products?.sku}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={isReduce ? 'destructive' : 'default'}>
+                          {transaction.transaction_type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{transaction.quantity} {transaction.products?.unit}</TableCell>
+                      <TableCell>{transaction.invoice?.customer_name || '-'}</TableCell>
+                      <TableCell>
+                        {transaction.invoice ? (
+                          <button
+                            type="button"
+                            className="text-primary hover:underline font-medium"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewInvoice(transaction.invoice!.id);
+                            }}
+                          >
+                            {transaction.invoice.invoice_number}
+                          </button>
+                        ) : (
+                          '-'
+                        )}
+                      </TableCell>
+                      <TableCell>{transaction.batch_number || '-'}</TableCell>
+                      <TableCell>
+                        <span className={isReduce ? 'text-red-600' : 'text-green-600'}>
+                          {transaction.previous_stock} → {transaction.new_stock}
+                        </span>
+                      </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEdit(transaction)}
+                          >
+                            <Edit2 className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDelete(transaction.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
