@@ -435,11 +435,112 @@ export default function StockRecords() {
   const handleSyncVerify = async () => {
     setSyncing(true);
     let created = 0;
+    let salesSynced = 0;
     let chainFixed = 0;
     let stockMismatches = 0;
+    let orphanedCleaned = 0;
 
     try {
-      // 1. Get all products
+      // ===== PHASE 1: Sync sales invoice items with stock transactions =====
+      // Get all sales invoice items with their invoice details
+      const { data: allInvoiceItems } = await supabase
+        .from("sales_invoice_items")
+        .select("id, product_id, quantity, sales_invoice_id, sales_invoices!inner(invoice_date, invoice_number)")
+        .order("created_at", { ascending: true });
+
+      if (allInvoiceItems) {
+        // Get all sale/sale_adjust/sale_revert transactions with references
+        const { data: saleTxns } = await supabase
+          .from("stock_transactions")
+          .select("id, product_id, quantity, transaction_type, reference_type, reference_id")
+          .in("transaction_type", ['sale', 'sale_adjust', 'sale_revert']);
+
+        // Build a set of invoice IDs that already have stock transactions
+        const coveredInvoices = new Set<string>();
+        if (saleTxns) {
+          for (const txn of saleTxns) {
+            if (txn.reference_id) {
+              coveredInvoices.add(`${txn.reference_id}_${txn.product_id}_${txn.transaction_type}`);
+            }
+          }
+        }
+
+        // Group items by invoice to find missing sale transactions
+        for (const item of allInvoiceItems) {
+          const key = `${item.sales_invoice_id}_${item.product_id}_sale`;
+          if (!coveredInvoices.has(key)) {
+            // Check if there's any matching transaction by product+quantity (without reference)
+            const hasMatch = saleTxns?.some(t =>
+              !t.reference_id &&
+              t.product_id === item.product_id &&
+              t.quantity === item.quantity &&
+              t.transaction_type === 'sale'
+            );
+
+            if (!hasMatch) {
+              // Get current stock for this product
+              const { data: prod } = await supabase
+                .from("products")
+                .select("stock_quantity")
+                .eq("id", item.product_id)
+                .maybeSingle();
+
+              const prevStock = prod?.stock_quantity || 0;
+              const newStock = prevStock - item.quantity;
+
+              // Create the missing sale transaction
+              const invoiceData = item.sales_invoices as any;
+              await supabase.from("stock_transactions").insert({
+                product_id: item.product_id,
+                transaction_type: 'sale',
+                quantity: item.quantity,
+                previous_stock: prevStock,
+                new_stock: newStock,
+                description: `Sales invoice ${invoiceData?.invoice_number || ''} (auto-synced)`,
+                transaction_date: invoiceData?.invoice_date || new Date().toISOString().split('T')[0],
+                reference_type: 'sales_invoice',
+                reference_id: item.sales_invoice_id,
+              });
+
+              // Update product stock
+              await supabase
+                .from("products")
+                .update({ stock_quantity: newStock })
+                .eq("id", item.product_id);
+
+              salesSynced++;
+            }
+          }
+        }
+      }
+
+      // ===== PHASE 2: Clean orphaned stock transactions (referencing deleted invoices) =====
+      const { data: orphanedTxns } = await supabase
+        .from("stock_transactions")
+        .select("id, product_id, reference_id, reference_type")
+        .eq("reference_type", "sales_invoice")
+        .not("reference_id", "is", null);
+
+      if (orphanedTxns) {
+        const { data: existingInvoices } = await supabase
+          .from("sales_invoices")
+          .select("id");
+
+        const invoiceIds = new Set(existingInvoices?.map(i => i.id) || []);
+
+        for (const txn of orphanedTxns) {
+          if (txn.reference_id && !invoiceIds.has(txn.reference_id)) {
+            // This transaction references a deleted invoice — mark it as orphaned
+            await supabase
+              .from("stock_transactions")
+              .update({ description: (txn as any).description ? `${(txn as any).description} [orphaned - invoice deleted]` : 'Orphaned - invoice deleted' })
+              .eq("id", txn.id);
+            orphanedCleaned++;
+          }
+        }
+      }
+
+      // ===== PHASE 3: Opening stock & chain verification (existing logic) =====
       const { data: allProducts, error: prodErr } = await supabase
         .from("products")
         .select("id, name, stock_quantity");
@@ -448,7 +549,6 @@ export default function StockRecords() {
       if (!allProducts) { setSyncing(false); return; }
 
       for (const product of allProducts) {
-        // 2. Get all transactions for this product, chronologically
         const { data: txns } = await supabase
           .from("stock_transactions")
           .select("id, transaction_type, quantity, previous_stock, new_stock")
@@ -456,7 +556,7 @@ export default function StockRecords() {
           .order("transaction_date", { ascending: true })
           .order("created_at", { ascending: true });
 
-        // 3. If product has stock but no transactions at all, create an opening stock record
+        // If product has stock but no transactions, create opening stock
         if ((!txns || txns.length === 0) && (product.stock_quantity || 0) > 0) {
           await supabase.from("stock_transactions").insert({
             product_id: product.id,
@@ -468,17 +568,16 @@ export default function StockRecords() {
             transaction_date: new Date().toISOString().split('T')[0],
           });
           created++;
-          continue; // chain is correct for single record
+          continue;
         }
 
         if (!txns || txns.length === 0) continue;
 
-        // 4. Check if there's an opening_stock transaction — if not and first record starts > 0, create one
+        // Check for missing opening stock
         const hasOpening = txns.some(t => t.transaction_type === 'opening_stock');
         if (!hasOpening) {
           const firstTxn = txns[0];
           if (firstTxn.previous_stock > 0) {
-            // Insert an opening stock record before everything
             const { data: earliestTxn } = await supabase
               .from("stock_transactions")
               .select("transaction_date")
@@ -500,7 +599,7 @@ export default function StockRecords() {
           }
         }
 
-        // 5. Re-fetch after possible insert and recalculate chain
+        // Recalculate chain
         const { data: refreshedTxns } = await supabase
           .from("stock_transactions")
           .select("id, previous_stock, new_stock")
@@ -526,7 +625,7 @@ export default function StockRecords() {
           }
           if (hadFix) chainFixed++;
 
-          // 6. Verify product stock matches final chain value
+          // Verify product stock matches final chain value
           if (product.stock_quantity !== runningStock) {
             await supabase
               .from("products")
@@ -540,15 +639,17 @@ export default function StockRecords() {
       fetchTransactions();
 
       const messages = [];
+      if (salesSynced > 0) messages.push(`${salesSynced} missing sale record(s) created`);
       if (created > 0) messages.push(`${created} opening stock record(s) created`);
       if (chainFixed > 0) messages.push(`${chainFixed} product chain(s) corrected`);
       if (stockMismatches > 0) messages.push(`${stockMismatches} product stock(s) fixed`);
+      if (orphanedCleaned > 0) messages.push(`${orphanedCleaned} orphaned record(s) flagged`);
 
       toast({
         title: messages.length > 0 ? "Sync & Verify Complete" : "All Records Verified ✓",
         description: messages.length > 0
           ? messages.join(', ')
-          : "All stock records are correct and in sync",
+          : "All stock records are correct and in sync with sales",
       });
     } catch (error) {
       toast({
