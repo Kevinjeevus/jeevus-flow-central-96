@@ -542,6 +542,19 @@ export default function StockRecords() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Invoice Preview */}
+      {selectedInvoice && (
+        <InvoicePreview
+          isOpen={showInvoicePreview}
+          onClose={() => {
+            setShowInvoicePreview(false);
+            setSelectedInvoice(null);
+          }}
+          invoiceData={selectedInvoice}
+          onRefresh={fetchTransactions}
+        />
+      )}
     </div>
   );
 }
