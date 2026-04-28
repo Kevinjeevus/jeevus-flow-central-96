@@ -16,6 +16,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { InvoicePreview } from "@/components/InvoicePreview";
 
 interface StockTransaction {
   id: string;
@@ -28,10 +29,17 @@ interface StockTransaction {
   previous_stock: number;
   new_stock: number;
   created_at: string;
+  reference_type?: string | null;
+  reference_id?: string | null;
   products?: {
     name: string;
     sku: string;
     unit: string;
+  } | null;
+  invoice?: {
+    id: string;
+    invoice_number: string;
+    customer_name: string;
   } | null;
 }
 
