@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Navigate } from "react-router-dom";
-import { FileText, Plus, Search, Eye, Users, Edit, Share, Trash2, MoreHorizontal } from "lucide-react";
+import { FileText, Plus, Search, Eye, Users, Edit, Share, Trash2, MoreHorizontal, Ban } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -373,6 +373,35 @@ export default function SaleInvoices() {
     }
   };
 
+  const handleCancelInvoice = async (invoiceId: string) => {
+    if (!confirm("Cancel this invoice? Stock will be restored and the invoice items will be removed.")) {
+      return;
+    }
+    try {
+      // Deleting items triggers stock revert via DB trigger
+      const { error: itemsError } = await supabase
+        .from('sales_invoice_items')
+        .delete()
+        .eq('sales_invoice_id', invoiceId);
+      if (itemsError) throw itemsError;
+
+      const { error: updateError } = await supabase
+        .from('sales_invoices')
+        .update({ status: 'cancelled', total_amount: 0, subtotal: 0, tax_amount: 0, discount_amount: 0 })
+        .eq('id', invoiceId);
+      if (updateError) throw updateError;
+
+      toast({ title: "Invoice cancelled", description: "Stock has been restored." });
+      fetchInvoices();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to cancel invoice",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <>
       {/* Invoice Preview Dialog */}
@@ -556,6 +585,12 @@ export default function SaleInvoices() {
                                 <Share className="h-4 w-4 mr-2" />
                                 Share
                               </DropdownMenuItem>
+                              {invoice.status !== 'cancelled' && (
+                                <DropdownMenuItem onClick={() => handleCancelInvoice(invoice.id)}>
+                                  <Ban className="h-4 w-4 mr-2" />
+                                  Cancel
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem
                                 onClick={() => handleDeleteInvoice(invoice.id)}
                                 className="text-destructive"
@@ -768,6 +803,12 @@ export default function SaleInvoices() {
                                   <Share className="h-4 w-4 mr-2" />
                                   Share
                                 </DropdownMenuItem>
+                                {invoice.status !== 'cancelled' && (
+                                  <DropdownMenuItem onClick={() => handleCancelInvoice(invoice.id)}>
+                                    <Ban className="h-4 w-4 mr-2" />
+                                    Cancel
+                                  </DropdownMenuItem>
+                                )}
                                 <DropdownMenuItem
                                   onClick={() => handleDeleteInvoice(invoice.id)}
                                   className="text-destructive"
