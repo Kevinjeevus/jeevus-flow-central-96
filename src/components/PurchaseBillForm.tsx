@@ -39,6 +39,12 @@ export function PurchaseBillForm({ onClose, onSuccess, editBill }: PurchaseBillF
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [showSupplierForm, setShowSupplierForm] = useState(false);
+
+  const loadSuppliers = async () => {
+    const { data, error } = await supabase.from("suppliers").select("id,name,email,phone").order("name");
+    if (error) console.error(error); else setSuppliers(data || []);
+  };
 
   const [billData, setBillData] = useState({
     supplier_id: editBill?.supplier_id || "",
