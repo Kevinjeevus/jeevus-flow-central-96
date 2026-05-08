@@ -531,7 +531,7 @@ export default function Customers() {
                 </TableRow>
               ) : filteredCustomers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center">No customers found</TableCell>
+                  <TableCell colSpan={9} className="text-center">No customers found</TableCell>
                 </TableRow>
               ) : (
                 filteredCustomers.map((customer) => (
