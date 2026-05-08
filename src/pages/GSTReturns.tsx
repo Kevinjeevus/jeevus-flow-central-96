@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GSTReturnsList } from "@/components/finance/GSTReturnsList";
 import { GSTReturnForm } from "@/components/finance/GSTReturnForm";
 import { GenerateGSTReturnDialog } from "@/components/finance/GenerateGSTReturnDialog";
+import { GSTR1Report } from "@/components/finance/GSTR1Report";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -15,6 +16,7 @@ export default function GSTReturns() {
   const [editingReturn, setEditingReturn] = useState(null);
   const [activeTab, setActiveTab] = useState("gstr1");
   const [showGenerate, setShowGenerate] = useState(false);
+  const [showGSTR1Report, setShowGSTR1Report] = useState(false);
 
   const { data: gstReturns, isLoading } = useQuery({
     queryKey: ["gst-returns"],
@@ -130,7 +132,7 @@ export default function GSTReturns() {
             
             <div className="flex items-center gap-2">
               <Button 
-                onClick={() => setShowGenerate(true)}
+                onClick={() => activeTab === 'gstr1' ? setShowGSTR1Report(true) : setShowGenerate(true)}
                 variant="secondary"
               >
                 <FileText className="h-4 w-4 mr-2" />
@@ -194,6 +196,10 @@ export default function GSTReturns() {
           open={showGenerate}
           onOpenChange={setShowGenerate}
           gstrType={activeTab as any}
+        />
+        <GSTR1Report
+          open={showGSTR1Report}
+          onOpenChange={setShowGSTR1Report}
         />
       </div>
   );
