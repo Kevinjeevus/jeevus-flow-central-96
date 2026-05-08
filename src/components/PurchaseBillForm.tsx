@@ -242,16 +242,21 @@ export function PurchaseBillForm({ onClose, onSuccess, editBill }: PurchaseBillF
           <CardContent className="space-y-4">
             <div>
               <Label>Supplier</Label>
-              <Select value={billData.supplier_id} onValueChange={(v) => setBillData({ ...billData, supplier_id: v })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select supplier" />
-                </SelectTrigger>
-                <SelectContent>
-                  {suppliers.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select value={billData.supplier_id} onValueChange={(v) => setBillData({ ...billData, supplier_id: v })}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Select supplier" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {suppliers.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button type="button" variant="outline" size="icon" onClick={() => setShowSupplierForm(true)} title="Add new supplier">
+                  <UserPlus className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
