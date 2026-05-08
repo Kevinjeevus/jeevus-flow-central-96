@@ -505,6 +505,15 @@ export default function Customers() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={filteredCustomers.length > 0 && filteredCustomers.every(c => selectedIds.includes(c.id))}
+                    onCheckedChange={(v) => {
+                      if (v) setSelectedIds(filteredCustomers.map(c => c.id));
+                      else setSelectedIds([]);
+                    }}
+                  />
+                </TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Contact</TableHead>
                 <TableHead>Company</TableHead>
@@ -518,7 +527,7 @@ export default function Customers() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center">Loading...</TableCell>
+                  <TableCell colSpan={9} className="text-center">Loading...</TableCell>
                 </TableRow>
               ) : filteredCustomers.length === 0 ? (
                 <TableRow>
