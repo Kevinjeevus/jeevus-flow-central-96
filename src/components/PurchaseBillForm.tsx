@@ -5,10 +5,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Save, Send } from "lucide-react";
+import { Plus, Trash2, Save, Send, UserPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { usePurchaseBillNumber } from "@/hooks/usePurchaseBillNumber";
+import { SupplierForm } from "@/components/SupplierForm";
 
 interface Supplier { id: string; name: string; email?: string; phone?: string }
 interface Product { id: string; name: string; purchase_price: number; gst_rate: number }
@@ -38,6 +39,12 @@ export function PurchaseBillForm({ onClose, onSuccess, editBill }: PurchaseBillF
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [showSupplierForm, setShowSupplierForm] = useState(false);
+
+  const loadSuppliers = async () => {
+    const { data, error } = await supabase.from("suppliers").select("id,name,email,phone").order("name");
+    if (error) console.error(error); else setSuppliers(data || []);
+  };
 
   const [billData, setBillData] = useState({
     supplier_id: editBill?.supplier_id || "",
@@ -235,16 +242,21 @@ export function PurchaseBillForm({ onClose, onSuccess, editBill }: PurchaseBillF
           <CardContent className="space-y-4">
             <div>
               <Label>Supplier</Label>
-              <Select value={billData.supplier_id} onValueChange={(v) => setBillData({ ...billData, supplier_id: v })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select supplier" />
-                </SelectTrigger>
-                <SelectContent>
-                  {suppliers.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select value={billData.supplier_id} onValueChange={(v) => setBillData({ ...billData, supplier_id: v })}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Select supplier" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {suppliers.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button type="button" variant="outline" size="icon" onClick={() => setShowSupplierForm(true)} title="Add new supplier">
+                  <UserPlus className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -368,6 +380,16 @@ export function PurchaseBillForm({ onClose, onSuccess, editBill }: PurchaseBillF
           </CardContent>
         </Card>
       </div>
+
+      {showSupplierForm && (
+        <SupplierForm
+          onClose={() => setShowSupplierForm(false)}
+          onSuccess={async () => {
+            setShowSupplierForm(false);
+            await loadSuppliers();
+          }}
+        />
+      )}
     </div>
   );
 }
