@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, Filter, Edit, Trash2, Users, Phone, Mail, MapPin } from "lucide-react";
+import { Plus, Search, Filter, Edit, Trash2, Users, Phone, Mail, MapPin, ArrowRightLeft } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,6 +40,8 @@ export default function Customers() {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [transferring, setTransferring] = useState(false);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -225,6 +228,50 @@ export default function Customers() {
         description: error.message,
         variant: "destructive",
       });
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleTransferToSuppliers = async (deleteAfter: boolean) => {
+    const targets = customers.filter(c => selectedIds.includes(c.id));
+    if (targets.length === 0) return;
+    try {
+      setTransferring(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      const rows = targets.map(c => ({
+        name: c.name,
+        email: c.email || null,
+        phone: c.phone || null,
+        company: c.company || null,
+        address: c.address || null,
+        city: c.city || null,
+        state: c.state || null,
+        pincode: c.pincode || null,
+        gstin: c.gstin || null,
+        status: c.status || 'active',
+        created_by: user?.id || null,
+      }));
+      const { error } = await supabase.from("suppliers").insert(rows);
+      if (error) throw error;
+
+      if (deleteAfter) {
+        const { error: delErr } = await supabase.from("customers").delete().in("id", selectedIds);
+        if (delErr) throw delErr;
+      }
+
+      toast({
+        title: "Transferred",
+        description: `${targets.length} customer(s) ${deleteAfter ? "moved" : "copied"} to suppliers`,
+      });
+      setSelectedIds([]);
+      fetchCustomers();
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } finally {
+      setTransferring(false);
     }
   };
 
@@ -439,12 +486,34 @@ export default function Customers() {
               <Filter className="h-4 w-4 mr-2" />
               Filter
             </Button>
+            {selectedIds.length > 0 && (
+              <>
+                <span className="text-sm text-muted-foreground ml-2">{selectedIds.length} selected</span>
+                <Button variant="outline" size="sm" disabled={transferring} onClick={() => handleTransferToSuppliers(false)}>
+                  <ArrowRightLeft className="h-4 w-4 mr-2" />
+                  Copy to Suppliers
+                </Button>
+                <Button variant="default" size="sm" disabled={transferring} onClick={() => handleTransferToSuppliers(true)}>
+                  <ArrowRightLeft className="h-4 w-4 mr-2" />
+                  Move to Suppliers
+                </Button>
+              </>
+            )}
           </div>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={filteredCustomers.length > 0 && filteredCustomers.every(c => selectedIds.includes(c.id))}
+                    onCheckedChange={(v) => {
+                      if (v) setSelectedIds(filteredCustomers.map(c => c.id));
+                      else setSelectedIds([]);
+                    }}
+                  />
+                </TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Contact</TableHead>
                 <TableHead>Company</TableHead>
@@ -458,15 +527,21 @@ export default function Customers() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center">Loading...</TableCell>
+                  <TableCell colSpan={9} className="text-center">Loading...</TableCell>
                 </TableRow>
               ) : filteredCustomers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center">No customers found</TableCell>
+                  <TableCell colSpan={9} className="text-center">No customers found</TableCell>
                 </TableRow>
               ) : (
                 filteredCustomers.map((customer) => (
-                  <TableRow key={customer.id}>
+                  <TableRow key={customer.id} data-state={selectedIds.includes(customer.id) ? "selected" : undefined}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.includes(customer.id)}
+                        onCheckedChange={() => toggleSelect(customer.id)}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">
                       <div className="space-y-1">
                         <div>{customer.name}</div>
