@@ -12,6 +12,7 @@ import { FileSpreadsheet, Download, Loader2, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { startOfMonth, endOfMonth } from "date-fns";
+import * as XLSX from "xlsx";
 
 interface GSTR1ReportProps {
   open: boolean;
@@ -152,10 +153,10 @@ export function GSTR1Report({ open, onOpenChange }: GSTR1ReportProps) {
   const b2bRows = useMemo(() => filteredRows.filter(r => r.customer_gstin), [filteredRows]);
   const b2cRows = useMemo(() => filteredRows.filter(r => !r.customer_gstin), [filteredRows]);
 
-  // Aggregate B2B by invoice
-  const b2bInvoices = useMemo(() => {
-    const map = new Map<string, { invoice_number: string; date: string; gstin: string; name: string; taxable: number; cgst: number; sgst: number; igst: number; total: number; gst_rate: number }>();
-    for (const r of b2bRows) {
+  // Helper to aggregate rows by invoice number
+  const aggregateInvoices = (sourceRows: InvoiceRow[]) => {
+    const map = new Map<string, { invoice_number: string; date: string; gstin: string | null; name: string; taxable: number; cgst: number; sgst: number; igst: number; total: number; gst_rate: number; status: string }>();
+    for (const r of sourceRows) {
       const key = r.invoice_number;
       if (map.has(key)) {
         const e = map.get(key)!;
@@ -165,11 +166,27 @@ export function GSTR1Report({ open, onOpenChange }: GSTR1ReportProps) {
         e.igst += r.igst;
         e.total += r.total;
       } else {
-        map.set(key, { invoice_number: r.invoice_number, date: r.invoice_date, gstin: r.customer_gstin!, name: r.customer_name, taxable: r.taxable_value, cgst: r.cgst, sgst: r.sgst, igst: r.igst, total: r.total, gst_rate: r.gst_rate });
+        map.set(key, { 
+          invoice_number: r.invoice_number, 
+          date: r.invoice_date, 
+          gstin: r.customer_gstin, 
+          name: r.customer_name, 
+          taxable: r.taxable_value, 
+          cgst: r.cgst, 
+          sgst: r.sgst, 
+          igst: r.igst, 
+          total: r.total, 
+          gst_rate: r.gst_rate,
+          status: r.status || ''
+        });
       }
     }
     return Array.from(map.values());
-  }, [b2bRows]);
+  };
+
+  const b2bInvoices = useMemo(() => aggregateInvoices(b2bRows), [b2bRows]);
+  const b2cInvoices = useMemo(() => aggregateInvoices(b2cRows), [b2cRows]);
+  const allInvoices = useMemo(() => aggregateInvoices(filteredRows), [filteredRows]);
 
   // B2C summary by GST rate
   const b2cSummary = useMemo(() => {
@@ -190,6 +207,7 @@ export function GSTR1Report({ open, onOpenChange }: GSTR1ReportProps) {
   const hsnSummary = useMemo(() => {
     const map = new Map<string, { hsn: string; desc: string; qty: number; unit: string; taxable: number; cgst: number; sgst: number; igst: number; total_tax: number; rate: number }>();
     for (const r of filteredRows) {
+      if (r.status === 'cancelled') continue;
       const key = r.hsn_code || "N/A";
       if (map.has(key)) {
         const e = map.get(key)!;
@@ -208,10 +226,10 @@ export function GSTR1Report({ open, onOpenChange }: GSTR1ReportProps) {
     return { 
       total: invoiceNums.length, 
       b2b: b2bInvoices.length, 
-      b2c: new Set(b2cRows.map(r => r.invoice_number)).size,
+      b2c: b2cInvoices.length,
       cancelled: cancelledCount
     };
-  }, [filteredRows, b2bInvoices, b2cRows]);
+  }, [filteredRows, b2bInvoices, b2cInvoices]);
 
   // Totals
   const totals = useMemo(() => {
@@ -222,56 +240,68 @@ export function GSTR1Report({ open, onOpenChange }: GSTR1ReportProps) {
   const periodLabel = `${MONTHS.find(m => m.value === month)?.label} ${year}`;
 
   const exportExcel = () => {
-    // Build CSV content for Excel
-    const sections: string[] = [];
-    // Header
-    sections.push(`GSTR-1 Report`);
-    sections.push(`GSTIN,${company?.gstin || ""}`);
-    sections.push(`Business Name,${company?.company_name || ""}`);
-    sections.push(`Return Period,${periodLabel}`);
-    sections.push(``);
+    const wb = XLSX.utils.book_new();
 
-    // B2B
-    sections.push(`B2B Invoices (Sales to Registered Dealers)`);
-    sections.push(`Invoice No,Date,Customer GSTIN,Party Name,Taxable Value,GST %,CGST,SGST,IGST,Total`);
+    // ALL Invoices Sheet
+    const wsAllData = [
+      ["GSTR-1 Report - ALL Invoices"],
+      [`GSTIN: ${company?.gstin || ""}`, `Period: ${periodLabel}`, `Business: ${company?.company_name || ""}`],
+      [],
+      ["Invoice No", "Date", "Customer GSTIN", "Party Name", "Taxable Value", "CGST", "SGST", "IGST", "Total", "Status"]
+    ];
+    for (const inv of allInvoices) {
+      wsAllData.push([inv.invoice_number, new Date(inv.date).toLocaleDateString(), inv.gstin || "", inv.name, inv.taxable.toFixed(2), inv.cgst.toFixed(2), inv.sgst.toFixed(2), inv.igst.toFixed(2), inv.total.toFixed(2), inv.status === 'cancelled' ? 'Cancelled' : 'Active']);
+    }
+    const wsAll = XLSX.utils.aoa_to_sheet(wsAllData);
+    XLSX.utils.book_append_sheet(wb, wsAll, "All Invoices");
+
+    // B2B Sheet
+    const wsB2BData = [
+      ["B2B Invoices (Sales to Registered Dealers)"],
+      ["Invoice No", "Date", "Customer GSTIN", "Party Name", "Taxable Value", "CGST", "SGST", "IGST", "Total", "Status"]
+    ];
     for (const inv of b2bInvoices) {
-      sections.push(`${inv.invoice_number},${inv.date},${inv.gstin},"${inv.name}",${inv.taxable.toFixed(2)},${inv.gst_rate}%,${inv.cgst.toFixed(2)},${inv.sgst.toFixed(2)},${inv.igst.toFixed(2)},${inv.total.toFixed(2)}`);
+      wsB2BData.push([inv.invoice_number, new Date(inv.date).toLocaleDateString(), inv.gstin || "", inv.name, inv.taxable.toFixed(2), inv.cgst.toFixed(2), inv.sgst.toFixed(2), inv.igst.toFixed(2), inv.total.toFixed(2), inv.status === 'cancelled' ? 'Cancelled' : 'Active']);
     }
-    sections.push(``);
+    const wsB2B = XLSX.utils.aoa_to_sheet(wsB2BData);
+    XLSX.utils.book_append_sheet(wb, wsB2B, "B2B");
 
-    // B2C
-    sections.push(`B2C Summary (Sales to Unregistered Dealers)`);
-    sections.push(`GST Rate,No. of Invoices,Taxable Value,CGST,SGST,IGST,Total`);
-    for (const s of b2cSummary) {
-      sections.push(`${s.rate}%,${s.count},${s.taxable.toFixed(2)},${s.cgst.toFixed(2)},${s.sgst.toFixed(2)},${s.igst.toFixed(2)},${s.total.toFixed(2)}`);
+    // B2C Sheet
+    const wsB2CData = [
+      ["B2C Invoices (Sales to Unregistered Dealers)"],
+      ["Invoice No", "Date", "Customer GSTIN", "Party Name", "Taxable Value", "CGST", "SGST", "IGST", "Total", "Status"]
+    ];
+    for (const inv of b2cInvoices) {
+      wsB2CData.push([inv.invoice_number, new Date(inv.date).toLocaleDateString(), inv.gstin || "", inv.name, inv.taxable.toFixed(2), inv.cgst.toFixed(2), inv.sgst.toFixed(2), inv.igst.toFixed(2), inv.total.toFixed(2), inv.status === 'cancelled' ? 'Cancelled' : 'Active']);
     }
-    sections.push(``);
+    const wsB2C = XLSX.utils.aoa_to_sheet(wsB2CData);
+    XLSX.utils.book_append_sheet(wb, wsB2C, "B2C");
 
-    // HSN
-    sections.push(`HSN Summary`);
-    sections.push(`HSN Code,Description,UQC,Qty,Taxable Value,GST Rate,CGST,SGST,IGST,Total Tax`);
+    // HSN Sheet
+    const wsHSNData = [
+      ["HSN Summary"],
+      ["HSN Code", "Description", "UQC", "Qty", "Taxable Value", "GST Rate", "CGST", "SGST", "IGST", "Total Tax"]
+    ];
     for (const h of hsnSummary) {
-      sections.push(`${h.hsn},"${h.desc}",${h.unit},${h.qty},${h.taxable.toFixed(2)},${h.rate}%,${h.cgst.toFixed(2)},${h.sgst.toFixed(2)},${h.igst.toFixed(2)},${h.total_tax.toFixed(2)}`);
+      wsHSNData.push([h.hsn, h.desc, h.unit, h.qty.toString(), h.taxable.toFixed(2), `${h.rate}%`, h.cgst.toFixed(2), h.sgst.toFixed(2), h.igst.toFixed(2), h.total_tax.toFixed(2)]);
     }
-    sections.push(``);
+    const wsHSN = XLSX.utils.aoa_to_sheet(wsHSNData);
+    XLSX.utils.book_append_sheet(wb, wsHSN, "HSN Summary");
 
-    // Doc summary
-    sections.push(`Document Summary`);
-    sections.push(`Type,Count`);
-    sections.push(`Total Invoices,${docSummary.total}`);
-    sections.push(`B2B Invoices,${docSummary.b2b}`);
-    sections.push(`B2C Invoices,${docSummary.b2c}`);
-    sections.push(`Cancelled Invoices,${docSummary.cancelled}`);
+    // Docs Sheet
+    const wsDocsData = [
+      ["Document Summary"],
+      ["Type", "Count"],
+      ["Total Invoices Issued", docSummary.total.toString()],
+      ["B2B Invoices (Registered)", docSummary.b2b.toString()],
+      ["B2C Invoices (Unregistered)", docSummary.b2c.toString()],
+      ["Cancelled Invoices", docSummary.cancelled.toString()]
+    ];
+    const wsDocs = XLSX.utils.aoa_to_sheet(wsDocsData);
+    XLSX.utils.book_append_sheet(wb, wsDocs, "Docs Summary");
 
-    const csv = sections.join("\n");
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `GSTR1_${month}_${year}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast({ title: "Exported", description: "GSTR-1 report downloaded as CSV (open in Excel)" });
+    XLSX.writeFile(wb, `GSTR1_${month}_${year}.xlsx`);
+    toast({ title: "Exported", description: "GSTR-1 report downloaded as Excel (.xlsx)" });
   };
 
   return (
@@ -362,13 +392,59 @@ export function GSTR1Report({ open, onOpenChange }: GSTR1ReportProps) {
             </div>
 
             {/* Tabs */}
-            <Tabs defaultValue="b2b">
-              <TabsList className="w-full grid grid-cols-4">
+            <Tabs defaultValue="all">
+              <TabsList className="w-full grid grid-cols-5">
+                <TabsTrigger value="all">ALL <Badge variant="secondary" className="ml-1 text-[10px]">{allInvoices.length}</Badge></TabsTrigger>
                 <TabsTrigger value="b2b">B2B <Badge variant="secondary" className="ml-1 text-[10px]">{b2bInvoices.length}</Badge></TabsTrigger>
-                <TabsTrigger value="b2c">B2C <Badge variant="secondary" className="ml-1 text-[10px]">{b2cSummary.length}</Badge></TabsTrigger>
+                <TabsTrigger value="b2c">B2C <Badge variant="secondary" className="ml-1 text-[10px]">{b2cInvoices.length}</Badge></TabsTrigger>
                 <TabsTrigger value="hsn">HSN <Badge variant="secondary" className="ml-1 text-[10px]">{hsnSummary.length}</Badge></TabsTrigger>
                 <TabsTrigger value="docs">Docs</TabsTrigger>
               </TabsList>
+
+              <TabsContent value="all" className="mt-3">
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm">ALL Invoices</CardTitle></CardHeader>
+                  <CardContent className="overflow-x-auto">
+                    {allInvoices.length === 0 ? <p className="text-sm text-muted-foreground py-4 text-center">No invoices for this period</p> : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Invoice No</TableHead><TableHead>Date</TableHead><TableHead>Customer GSTIN</TableHead><TableHead>Party Name</TableHead>
+                            <TableHead className="text-right">Taxable Value</TableHead><TableHead className="text-right">CGST</TableHead><TableHead className="text-right">SGST</TableHead><TableHead className="text-right">IGST</TableHead><TableHead className="text-right">Total</TableHead><TableHead className="text-right">Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {allInvoices.map((inv, i) => (
+                            <TableRow key={i}>
+                              <TableCell className="font-medium">{inv.invoice_number}</TableCell>
+                              <TableCell>{new Date(inv.date).toLocaleDateString()}</TableCell>
+                              <TableCell className="font-mono text-xs">{inv.gstin || '-'}</TableCell>
+                              <TableCell>{inv.name}</TableCell>
+                              <TableCell className="text-right">{fmt(inv.taxable)}</TableCell>
+                              <TableCell className="text-right">{fmt(inv.cgst)}</TableCell>
+                              <TableCell className="text-right">{fmt(inv.sgst)}</TableCell>
+                              <TableCell className="text-right">{fmt(inv.igst)}</TableCell>
+                              <TableCell className="text-right font-medium">{fmt(inv.total)}</TableCell>
+                              <TableCell className="text-right">
+                                {inv.status === 'cancelled' ? <Badge variant="destructive">Cancelled</Badge> : <Badge variant="secondary">Active</Badge>}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          <TableRow className="font-bold bg-muted/50">
+                            <TableCell colSpan={4}>Total</TableCell>
+                            <TableCell className="text-right">{fmt(allInvoices.reduce((s, r) => s + r.taxable, 0))}</TableCell>
+                            <TableCell className="text-right">{fmt(allInvoices.reduce((s, r) => s + r.cgst, 0))}</TableCell>
+                            <TableCell className="text-right">{fmt(allInvoices.reduce((s, r) => s + r.sgst, 0))}</TableCell>
+                            <TableCell className="text-right">{fmt(allInvoices.reduce((s, r) => s + r.igst, 0))}</TableCell>
+                            <TableCell className="text-right">{fmt(allInvoices.reduce((s, r) => s + r.total, 0))}</TableCell>
+                            <TableCell></TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
               <TabsContent value="b2b" className="mt-3">
                 <Card>
@@ -379,7 +455,7 @@ export function GSTR1Report({ open, onOpenChange }: GSTR1ReportProps) {
                         <TableHeader>
                           <TableRow>
                             <TableHead>Invoice No</TableHead><TableHead>Date</TableHead><TableHead>Customer GSTIN</TableHead><TableHead>Party Name</TableHead>
-                            <TableHead className="text-right">Taxable Value</TableHead><TableHead className="text-right">CGST</TableHead><TableHead className="text-right">SGST</TableHead><TableHead className="text-right">IGST</TableHead><TableHead className="text-right">Total</TableHead>
+                            <TableHead className="text-right">Taxable Value</TableHead><TableHead className="text-right">CGST</TableHead><TableHead className="text-right">SGST</TableHead><TableHead className="text-right">IGST</TableHead><TableHead className="text-right">Total</TableHead><TableHead className="text-right">Status</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -394,6 +470,9 @@ export function GSTR1Report({ open, onOpenChange }: GSTR1ReportProps) {
                               <TableCell className="text-right">{fmt(inv.sgst)}</TableCell>
                               <TableCell className="text-right">{fmt(inv.igst)}</TableCell>
                               <TableCell className="text-right font-medium">{fmt(inv.total)}</TableCell>
+                              <TableCell className="text-right">
+                                {inv.status === 'cancelled' ? <Badge variant="destructive">Cancelled</Badge> : <Badge variant="secondary">Active</Badge>}
+                              </TableCell>
                             </TableRow>
                           ))}
                           <TableRow className="font-bold bg-muted/50">
@@ -403,6 +482,7 @@ export function GSTR1Report({ open, onOpenChange }: GSTR1ReportProps) {
                             <TableCell className="text-right">{fmt(b2bInvoices.reduce((s, r) => s + r.sgst, 0))}</TableCell>
                             <TableCell className="text-right">{fmt(b2bInvoices.reduce((s, r) => s + r.igst, 0))}</TableCell>
                             <TableCell className="text-right">{fmt(b2bInvoices.reduce((s, r) => s + r.total, 0))}</TableCell>
+                            <TableCell></TableCell>
                           </TableRow>
                         </TableBody>
                       </Table>
@@ -413,36 +493,40 @@ export function GSTR1Report({ open, onOpenChange }: GSTR1ReportProps) {
 
               <TabsContent value="b2c" className="mt-3">
                 <Card>
-                  <CardHeader className="pb-2"><CardTitle className="text-sm">B2C — Sales to Unregistered Dealers (Rate-wise Summary)</CardTitle></CardHeader>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm">B2C — Sales to Unregistered Dealers</CardTitle></CardHeader>
                   <CardContent className="overflow-x-auto">
-                    {b2cSummary.length === 0 ? <p className="text-sm text-muted-foreground py-4 text-center">No B2C invoices for this period</p> : (
+                    {b2cInvoices.length === 0 ? <p className="text-sm text-muted-foreground py-4 text-center">No B2C invoices for this period</p> : (
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>GST Rate</TableHead><TableHead className="text-right">No. of Invoices</TableHead><TableHead className="text-right">Taxable Value</TableHead>
-                            <TableHead className="text-right">CGST</TableHead><TableHead className="text-right">SGST</TableHead><TableHead className="text-right">IGST</TableHead><TableHead className="text-right">Total</TableHead>
+                            <TableHead>Invoice No</TableHead><TableHead>Date</TableHead><TableHead>Party Name</TableHead>
+                            <TableHead className="text-right">Taxable Value</TableHead><TableHead className="text-right">CGST</TableHead><TableHead className="text-right">SGST</TableHead><TableHead className="text-right">IGST</TableHead><TableHead className="text-right">Total</TableHead><TableHead className="text-right">Status</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {b2cSummary.map((s, i) => (
+                          {b2cInvoices.map((inv, i) => (
                             <TableRow key={i}>
-                              <TableCell><Badge variant="outline">{s.rate}%</Badge></TableCell>
-                              <TableCell className="text-right">{s.count}</TableCell>
-                              <TableCell className="text-right">{fmt(s.taxable)}</TableCell>
-                              <TableCell className="text-right">{fmt(s.cgst)}</TableCell>
-                              <TableCell className="text-right">{fmt(s.sgst)}</TableCell>
-                              <TableCell className="text-right">{fmt(s.igst)}</TableCell>
-                              <TableCell className="text-right font-medium">{fmt(s.total)}</TableCell>
+                              <TableCell className="font-medium">{inv.invoice_number}</TableCell>
+                              <TableCell>{new Date(inv.date).toLocaleDateString()}</TableCell>
+                              <TableCell>{inv.name}</TableCell>
+                              <TableCell className="text-right">{fmt(inv.taxable)}</TableCell>
+                              <TableCell className="text-right">{fmt(inv.cgst)}</TableCell>
+                              <TableCell className="text-right">{fmt(inv.sgst)}</TableCell>
+                              <TableCell className="text-right">{fmt(inv.igst)}</TableCell>
+                              <TableCell className="text-right font-medium">{fmt(inv.total)}</TableCell>
+                              <TableCell className="text-right">
+                                {inv.status === 'cancelled' ? <Badge variant="destructive">Cancelled</Badge> : <Badge variant="secondary">Active</Badge>}
+                              </TableCell>
                             </TableRow>
                           ))}
                           <TableRow className="font-bold bg-muted/50">
-                            <TableCell>Total</TableCell>
-                            <TableCell className="text-right">{b2cSummary.reduce((s, r) => s + r.count, 0)}</TableCell>
-                            <TableCell className="text-right">{fmt(b2cSummary.reduce((s, r) => s + r.taxable, 0))}</TableCell>
-                            <TableCell className="text-right">{fmt(b2cSummary.reduce((s, r) => s + r.cgst, 0))}</TableCell>
-                            <TableCell className="text-right">{fmt(b2cSummary.reduce((s, r) => s + r.sgst, 0))}</TableCell>
-                            <TableCell className="text-right">{fmt(b2cSummary.reduce((s, r) => s + r.igst, 0))}</TableCell>
-                            <TableCell className="text-right">{fmt(b2cSummary.reduce((s, r) => s + r.total, 0))}</TableCell>
+                            <TableCell colSpan={3}>Total</TableCell>
+                            <TableCell className="text-right">{fmt(b2cInvoices.reduce((s, r) => s + r.taxable, 0))}</TableCell>
+                            <TableCell className="text-right">{fmt(b2cInvoices.reduce((s, r) => s + r.cgst, 0))}</TableCell>
+                            <TableCell className="text-right">{fmt(b2cInvoices.reduce((s, r) => s + r.sgst, 0))}</TableCell>
+                            <TableCell className="text-right">{fmt(b2cInvoices.reduce((s, r) => s + r.igst, 0))}</TableCell>
+                            <TableCell className="text-right">{fmt(b2cInvoices.reduce((s, r) => s + r.total, 0))}</TableCell>
+                            <TableCell></TableCell>
                           </TableRow>
                         </TableBody>
                       </Table>
