@@ -36,6 +36,7 @@ interface InvoiceRow {
   sgst: number;
   igst: number;
   total: number;
+  status?: string;
 }
 
 const MONTHS = [
@@ -72,13 +73,35 @@ export function GSTR1Report({ open, onOpenChange }: GSTR1ReportProps) {
         .from("sales_invoices")
         .select(`*, customers(name, gstin, state), sales_invoice_items(*, products(name, hsn_code, gst_rate, unit))`)
         .gte("invoice_date", start.toISOString().slice(0, 10))
-        .lte("invoice_date", end.toISOString().slice(0, 10))
-        .neq("status", "cancelled")
-        .order("invoice_date");
+        .lte("invoice_date", end.toISOString().slice(0, 10));
       if (error) throw error;
 
       const allRows: InvoiceRow[] = [];
       for (const inv of invoices || []) {
+        if (inv.status === 'cancelled') {
+          allRows.push({
+            invoice_number: inv.invoice_number,
+            invoice_date: inv.invoice_date,
+            customer_name: inv.customers?.name || "Cancelled",
+            customer_gstin: inv.customers?.gstin || null,
+            customer_state: inv.customers?.state || null,
+            hsn_code: "",
+            product_name: "Cancelled Invoice",
+            quantity: 0,
+            unit: "",
+            unit_price: 0,
+            total_price: 0,
+            gst_rate: 0,
+            taxable_value: 0,
+            cgst: 0,
+            sgst: 0,
+            igst: 0,
+            total: 0,
+            status: "cancelled"
+          });
+          continue;
+        }
+
         for (const item of inv.sales_invoice_items || []) {
           const qty = Number(item.quantity) || 0;
           const price = Number(item.unit_price) || 0;
@@ -105,9 +128,14 @@ export function GSTR1Report({ open, onOpenChange }: GSTR1ReportProps) {
             sgst: isInterstate ? 0 : taxAmount / 2,
             igst: isInterstate ? taxAmount : 0,
             total: lineTotal,
+            status: inv.status
           });
         }
       }
+      
+      // Sort rows by invoice number small to big (natural sort)
+      allRows.sort((a, b) => a.invoice_number.localeCompare(b.invoice_number, undefined, { numeric: true, sensitivity: 'base' }));
+      
       setRows(allRows);
       setGenerated(true);
     } catch (e: any) {
@@ -176,7 +204,13 @@ export function GSTR1Report({ open, onOpenChange }: GSTR1ReportProps) {
   // Document summary
   const docSummary = useMemo(() => {
     const invoiceNums = [...new Set(filteredRows.map(r => r.invoice_number))];
-    return { total: invoiceNums.length, b2b: b2bInvoices.length, b2c: new Set(b2cRows.map(r => r.invoice_number)).size };
+    const cancelledCount = new Set(filteredRows.filter(r => r.status === 'cancelled').map(r => r.invoice_number)).size;
+    return { 
+      total: invoiceNums.length, 
+      b2b: b2bInvoices.length, 
+      b2c: new Set(b2cRows.map(r => r.invoice_number)).size,
+      cancelled: cancelledCount
+    };
   }, [filteredRows, b2bInvoices, b2cRows]);
 
   // Totals
@@ -227,6 +261,7 @@ export function GSTR1Report({ open, onOpenChange }: GSTR1ReportProps) {
     sections.push(`Total Invoices,${docSummary.total}`);
     sections.push(`B2B Invoices,${docSummary.b2b}`);
     sections.push(`B2C Invoices,${docSummary.b2c}`);
+    sections.push(`Cancelled Invoices,${docSummary.cancelled}`);
 
     const csv = sections.join("\n");
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
@@ -469,6 +504,7 @@ export function GSTR1Report({ open, onOpenChange }: GSTR1ReportProps) {
                         <TableRow><TableCell>Total Invoices Issued</TableCell><TableCell className="text-right font-medium">{docSummary.total}</TableCell></TableRow>
                         <TableRow><TableCell>B2B Invoices (Registered)</TableCell><TableCell className="text-right">{docSummary.b2b}</TableCell></TableRow>
                         <TableRow><TableCell>B2C Invoices (Unregistered)</TableCell><TableCell className="text-right">{docSummary.b2c}</TableCell></TableRow>
+                        <TableRow><TableCell className="text-destructive">Cancelled Invoices</TableCell><TableCell className="text-right text-destructive">{docSummary.cancelled}</TableCell></TableRow>
                         <TableRow><TableCell>Nil Rated / Exempt</TableCell><TableCell className="text-right">0</TableCell></TableRow>
                         <TableRow><TableCell>Credit / Debit Notes</TableCell><TableCell className="text-right">0</TableCell></TableRow>
                       </TableBody>
