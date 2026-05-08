@@ -380,6 +380,16 @@ export function PurchaseBillForm({ onClose, onSuccess, editBill }: PurchaseBillF
           </CardContent>
         </Card>
       </div>
+
+      {showSupplierForm && (
+        <SupplierForm
+          onClose={() => setShowSupplierForm(false)}
+          onSuccess={async () => {
+            setShowSupplierForm(false);
+            await loadSuppliers();
+          }}
+        />
+      )}
     </div>
   );
 }
