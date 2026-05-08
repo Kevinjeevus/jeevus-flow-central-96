@@ -535,7 +535,13 @@ export default function Customers() {
                 </TableRow>
               ) : (
                 filteredCustomers.map((customer) => (
-                  <TableRow key={customer.id}>
+                  <TableRow key={customer.id} data-state={selectedIds.includes(customer.id) ? "selected" : undefined}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.includes(customer.id)}
+                        onCheckedChange={() => toggleSelect(customer.id)}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">
                       <div className="space-y-1">
                         <div>{customer.name}</div>
