@@ -486,6 +486,19 @@ export default function Customers() {
               <Filter className="h-4 w-4 mr-2" />
               Filter
             </Button>
+            {selectedIds.length > 0 && (
+              <>
+                <span className="text-sm text-muted-foreground ml-2">{selectedIds.length} selected</span>
+                <Button variant="outline" size="sm" disabled={transferring} onClick={() => handleTransferToSuppliers(false)}>
+                  <ArrowRightLeft className="h-4 w-4 mr-2" />
+                  Copy to Suppliers
+                </Button>
+                <Button variant="default" size="sm" disabled={transferring} onClick={() => handleTransferToSuppliers(true)}>
+                  <ArrowRightLeft className="h-4 w-4 mr-2" />
+                  Move to Suppliers
+                </Button>
+              </>
+            )}
           </div>
         </CardHeader>
         <CardContent>
