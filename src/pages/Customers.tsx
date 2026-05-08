@@ -40,6 +40,8 @@ export default function Customers() {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [transferring, setTransferring] = useState(false);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
