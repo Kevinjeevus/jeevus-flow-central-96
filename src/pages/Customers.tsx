@@ -231,6 +231,50 @@ export default function Customers() {
     }
   };
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleTransferToSuppliers = async (deleteAfter: boolean) => {
+    const targets = customers.filter(c => selectedIds.includes(c.id));
+    if (targets.length === 0) return;
+    try {
+      setTransferring(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      const rows = targets.map(c => ({
+        name: c.name,
+        email: c.email || null,
+        phone: c.phone || null,
+        company: c.company || null,
+        address: c.address || null,
+        city: c.city || null,
+        state: c.state || null,
+        pincode: c.pincode || null,
+        gstin: c.gstin || null,
+        status: c.status || 'active',
+        created_by: user?.id || null,
+      }));
+      const { error } = await supabase.from("suppliers").insert(rows);
+      if (error) throw error;
+
+      if (deleteAfter) {
+        const { error: delErr } = await supabase.from("customers").delete().in("id", selectedIds);
+        if (delErr) throw delErr;
+      }
+
+      toast({
+        title: "Transferred",
+        description: `${targets.length} customer(s) ${deleteAfter ? "moved" : "copied"} to suppliers`,
+      });
+      setSelectedIds([]);
+      fetchCustomers();
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } finally {
+      setTransferring(false);
+    }
+  };
+
   const filteredCustomers = customers.filter(customer =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     customer.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
