@@ -54,10 +54,12 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [companySettings, setCompanySettings] = useState<any>(null);
+  const [userFormat, setUserFormat] = useState<any>(null);
 
   useEffect(() => {
     if (isOpen) {
       fetchCompanySettings();
+      fetchUserFormat();
     }
   }, [isOpen]);
 
@@ -73,6 +75,28 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
     } catch (error: any) {
       console.error('Error fetching company settings:', error);
     }
+  };
+
+  const fetchUserFormat = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data, error } = await supabase
+        .from('user_invoice_formats')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (error) throw error;
+      setUserFormat(data);
+    } catch (error: any) {
+      console.error('Error fetching user invoice format:', error);
+    }
+  };
+
+  // Helper: check format setting with fallback to true
+  const fmt = (key: string, fallback: boolean = true) => {
+    if (!userFormat) return fallback;
+    return userFormat[key] ?? fallback;
   };
 
   // Calculate HSN/SAC wise tax breakdown
@@ -133,14 +157,14 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
               font-family: Arial, sans-serif; 
               margin: 0; 
               padding: 20px;
-              font-size: 12px; 
-              width: 210mm;
-              min-height: 297mm;
+              font-size: ${userFormat?.font_size === 'small' ? '10px' : userFormat?.font_size === 'large' ? '14px' : '12px'}; 
+              width: ${userFormat?.paper_size === 'A5' ? '148mm' : '210mm'};
+              min-height: ${userFormat?.paper_size === 'A5' ? '210mm' : '297mm'};
               box-sizing: border-box;
             }
             .header { text-align: center; margin-bottom: 30px; }
             .company-logo { height: 60px; width: auto; margin: 0 auto 10px; }
-            .company-name { font-size: 24px; font-weight: bold; color: #333; margin: 10px 0; }
+            .company-name { font-size: 24px; font-weight: bold; color: ${userFormat?.primary_color || '#333'}; margin: 10px 0; }
             .company-info { font-size: 12px; margin: 2px 0; color: #666; }
             .invoice-title { font-size: 18px; margin-top: 15px; font-weight: bold; }
             .invoice-details { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin: 30px 0; }
@@ -148,7 +172,7 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
             .detail-row { margin: 3px 0; }
             .table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 11px; }
             .table th, .table td { border: 1px solid #333; padding: 6px; text-align: left; }
-            .table th { background-color: #f5f5f5; font-weight: bold; text-align: center; }
+            .table th { background-color: ${userFormat?.accent_color || '#f5f5f5'}; font-weight: bold; text-align: center; }
             .table td.text-center { text-align: center; }
             .table td.text-right { text-align: right; }
             .summary-grid { display: grid; grid-template-columns: 1fr 300px; gap: 40px; margin: 30px 0; }
@@ -173,12 +197,12 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
         </head>
         <body>
           <div class="header">
-            ${companySettings?.company_logo_url ? `<img src="${companySettings.company_logo_url}" alt="Company Logo" class="company-logo" />` : ''}
-            <div class="company-name">${companySettings?.company_name || 'JEEVUS NATURALS'}</div>
-            ${companySettings?.address ? `<div class="company-info">${companySettings.address}</div>` : ''}
-            ${companySettings?.phone_number ? `<div class="company-info">Ph: ${companySettings.phone_number}</div>` : ''}
-            ${companySettings?.gstin ? `<div class="company-info">GSTIN: ${companySettings.gstin}</div>` : ''}
-            <div class="invoice-title">TAX INVOICE</div>
+            ${fmt('show_company_logo') && companySettings?.company_logo_url ? `<img src="${companySettings.company_logo_url}" alt="Company Logo" class="company-logo" />` : ''}
+            ${fmt('show_company_name') ? `<div class="company-name">${companySettings?.company_name || 'JEEVUS NATURALS'}</div>` : ''}
+            ${fmt('show_company_address') && companySettings?.address ? `<div class="company-info">${companySettings.address}</div>` : ''}
+            ${fmt('show_company_phone') && companySettings?.phone_number ? `<div class="company-info">Ph: ${companySettings.phone_number}</div>` : ''}
+            ${fmt('show_gstin') && companySettings?.gstin ? `<div class="company-info">GSTIN: ${companySettings.gstin}</div>` : ''}
+            <div class="invoice-title">${userFormat?.invoice_title || 'TAX INVOICE'}</div>
           </div>
           
           <div class="invoice-details">
@@ -201,11 +225,11 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
             <thead>
               <tr>
                 <th style="width: 30%;">Item name</th>
-                <th style="width: 10%;">HSN/SAC</th>
+                ${fmt('show_hsn_column') ? '<th style="width: 10%;">HSN/SAC</th>' : ''}
                 <th style="width: 8%;">Quantity</th>
-                <th style="width: 8%;">Unit</th>
+                ${fmt('show_unit_column') ? '<th style="width: 8%;">Unit</th>' : ''}
                 <th style="width: 12%;">Price/Unit</th>
-                <th style="width: 8%;">GST%</th>
+                ${fmt('show_gst_column') ? '<th style="width: 8%;">GST%</th>' : ''}
                 <th style="width: 12%;">Amount</th>
               </tr>
             </thead>
@@ -213,11 +237,11 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
               ${invoiceData.items.map(item => `
                 <tr>
                   <td>${item.product_name}</td>
-                  <td class="text-center">${item.hsn_code || 'N/A'}</td>
+                  ${fmt('show_hsn_column') ? `<td class="text-center">${item.hsn_code || 'N/A'}</td>` : ''}
                   <td class="text-center">${item.quantity}</td>
-                  <td class="text-center">${item.unit || 'Nos'}</td>
+                  ${fmt('show_unit_column') ? `<td class="text-center">${item.unit || 'Nos'}</td>` : ''}
                   <td class="text-right">₹${item.unit_price.toFixed(2)}</td>
-                  <td class="text-center">${item.gst_rate || 18}%</td>
+                  ${fmt('show_gst_column') ? `<td class="text-center">${item.gst_rate || 18}%</td>` : ''}
                   <td class="text-right">₹${item.total_price.toFixed(2)}</td>
                 </tr>
               `).join('')}
@@ -228,10 +252,10 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
             <div>
               <div class="detail-row"><strong>Total:</strong> ₹${invoiceData.total_amount.toFixed(2)}</div>
               
-              <div style="margin-top: 20px;">
+              ${fmt('show_amount_in_words') ? `<div style="margin-top: 20px;">
                 <div class="detail-row"><strong>Invoice Amount In Words:</strong></div>
                 <div class="detail-row">Rupees Only</div>
-              </div>
+              </div>` : ''}
               
               <div style="margin-top: 15px;">
                 <div class="detail-row"><strong>Payment Mode:</strong> ${invoiceData.payment_method?.charAt(0).toUpperCase() + invoiceData.payment_method?.slice(1) || 'Cash'}</div>
@@ -259,14 +283,14 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
                 <span>₹0.00</span>
               </div>
               
-              <div style="margin-top: 15px;">
+              ${fmt('show_previous_due', false) ? `<div style="margin-top: 15px;">
                 <div class="detail-row"><strong>Previous Due:</strong> ₹0.00</div>
                 <div class="detail-row"><strong>Current Balance:</strong> ₹${invoiceData.total_amount.toFixed(2)}</div>
-              </div>
+              </div>` : ''}
             </div>
           </div>
 
-          <table class="table" style="margin-top: 30px;">
+          ${fmt('show_hsn_summary') ? `<table class="table" style="margin-top: 30px;">
             <thead>
               <tr>
                 <th rowspan="2" style="text-align: center; vertical-align: middle;">HSN/SAC</th>
@@ -294,7 +318,7 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
                   <td class="text-right">₹${hsn.totalTax.toFixed(2)}</td>
                 </tr>
               `).join('')}
-              <tr style="font-weight: bold; background-color: #f5f5f5;">
+              <tr style="font-weight: bold; background-color: ${userFormat?.accent_color || '#f5f5f5'};">
                 <td class="text-center">Total</td>
                 <td class="text-right">₹${hsnBreakdown.reduce((sum, item) => sum + item.taxableAmount, 0).toFixed(2)}</td>
                 <td class="text-center">-</td>
@@ -304,15 +328,13 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
                 <td class="text-right">₹${hsnBreakdown.reduce((sum, item) => sum + item.totalTax, 0).toFixed(2)}</td>
               </tr>
             </tbody>
-          </table>
+          </table>` : ''}
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px;">
-            <div style="border: 1px solid #333; padding: 15px;">
+          <div style="display: grid; grid-template-columns: ${fmt('show_bank_details') && fmt('show_terms') ? '1fr 1fr' : '1fr'}; gap: 20px; margin-top: 30px;">
+            ${fmt('show_bank_details') ? `<div style="border: 1px solid #333; padding: 15px;">
               <div class="section-title">Bank Details</div>
               <div style="display: flex; margin-top: 10px;">
-                <div style="width: 60px; height: 60px; background-color: #f0f0f0; margin-right: 15px; display: flex; align-items: center; justify-content: center; font-size: 10px; text-align: center;">
-                  QR Code
-                </div>
+                <div style="width: 60px; height: 60px; background-color: #f0f0f0; margin-right: 15px; display: flex; align-items: center; justify-content: center; font-size: 10px; text-align: center;">QR Code</div>
                 <div>
                   ${invoiceData.bank_account ? `
                     <div class="detail-row"><strong>Name:</strong> ${invoiceData.bank_account.bank_name}</div>
@@ -328,19 +350,18 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
                   `}
                 </div>
               </div>
-            </div>
+            </div>` : ''}
             
-            <div style="border: 1px solid #333; padding: 15px;">
-              <div class="section-title">Terms and conditions</div>
-              <p style="margin: 10px 0; font-size: 11px;">Thanks for doing business with us!</p>
-              
-              <div style="margin-top: 40px; text-align: right;">
-                <p style="font-weight: bold; margin-bottom: 30px;">For Jeevus Naturals</p>
+            ${fmt('show_terms') || fmt('show_signature') ? `<div style="border: 1px solid #333; padding: 15px;">
+              ${fmt('show_terms') ? `<div class="section-title">Terms and conditions</div>
+              <p style="margin: 10px 0; font-size: 11px;">${userFormat?.custom_terms_text || 'Thanks for doing business with us!'}</p>` : ''}
+              ${fmt('show_signature') ? `<div style="margin-top: 40px; text-align: right;">
+                <p style="font-weight: bold; margin-bottom: 30px;">For ${userFormat?.custom_signatory_name || companySettings?.company_name || 'Jeevus Naturals'}</p>
                 <div style="border-top: 1px solid #333; padding-top: 10px;">
                   <p style="font-size: 11px;">Authorized Signatory</p>
                 </div>
-              </div>
-            </div>
+              </div>` : ''}
+            </div>` : ''}
           </div>
           
           ${invoiceData.notes ? `
@@ -351,7 +372,7 @@ export function InvoicePreview({ isOpen, onClose, invoiceData, onEdit, onDelete,
           ` : ''}
           
           <div style="margin-top: 40px; text-align: center; font-size: 10px;">
-            <p>Thank you for your business!</p>
+            <p>${userFormat?.custom_footer_text || 'Thank you for your business!'}</p>
           </div>
           
           <div class="no-print" style="margin-top: 30px; text-align: center;">

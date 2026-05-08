@@ -505,8 +505,9 @@ export default function Customers() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-10">
+                <TableHead className="w-14 px-3">
                   <Checkbox
+                    className="h-5 w-5 border-2"
                     checked={filteredCustomers.length > 0 && filteredCustomers.every(c => selectedIds.includes(c.id))}
                     onCheckedChange={(v) => {
                       if (v) setSelectedIds(filteredCustomers.map(c => c.id));
