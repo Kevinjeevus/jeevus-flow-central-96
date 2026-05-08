@@ -585,6 +585,12 @@ export default function SaleInvoices() {
                                 <Share className="h-4 w-4 mr-2" />
                                 Share
                               </DropdownMenuItem>
+                              {invoice.status !== 'cancelled' && (
+                                <DropdownMenuItem onClick={() => handleCancelInvoice(invoice.id)}>
+                                  <Ban className="h-4 w-4 mr-2" />
+                                  Cancel
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem
                                 onClick={() => handleDeleteInvoice(invoice.id)}
                                 className="text-destructive"
