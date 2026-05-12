@@ -51,20 +51,52 @@ export function TransactionPrefixes() {
   });
 
   useEffect(() => {
-    fetchPrefixes();
-  }, []);
+    if (!user) return;
+    (async () => {
+      const { data: sa } = await supabase.rpc('is_superadmin', { _user_id: user.id });
+      const superadmin = !!sa;
+      setIsSuperadmin(superadmin);
+      setTargetUserId(user.id);
+      if (superadmin) {
+        const { data: emps } = await supabase
+          .from('employees')
+          .select('user_id, full_name, email')
+          .not('user_id', 'is', null)
+          .order('full_name');
+        setUsers((emps || []) as UserOption[]);
+      }
+    })();
+  }, [user]);
 
-  const fetchPrefixes = async () => {
+  useEffect(() => {
+    if (targetUserId) fetchPrefixes(targetUserId);
+  }, [targetUserId]);
+
+  const fetchPrefixes = async (uid: string) => {
     try {
       const { data, error } = await supabase
         .from('transaction_prefixes')
         .select('*')
+        .eq('user_id', uid)
         .maybeSingle();
 
       if (error) throw error;
-      
+
       if (data) {
         setPrefixes(data);
+      } else {
+        setPrefixes({
+          firm_name: "JEEVUS NATURALS",
+          sale_prefix: "INV/",
+          credit_note_prefix: "",
+          sale_order_prefix: "",
+          purchase_order_prefix: "",
+          estimate_prefix: "",
+          proforma_invoice_prefix: "",
+          delivery_challan_prefix: "",
+          payment_in_prefix: "",
+          financial_year: "25-26",
+        });
       }
     } catch (error: any) {
       console.error('Error fetching prefixes:', error);
@@ -79,23 +111,25 @@ export function TransactionPrefixes() {
   };
 
   const handleSave = async () => {
-    if (!user) return;
-    
+    if (!user || !targetUserId) return;
+
     setIsLoading(true);
     try {
       setNumberPadding(padding);
+      const { id, ...rest } = prefixes;
       const prefixData = {
-        ...prefixes,
+        ...rest,
+        user_id: targetUserId,
         created_by: user.id,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       };
 
       let query;
-      if (prefixes.id) {
+      if (id) {
         query = supabase
           .from('transaction_prefixes')
           .update(prefixData)
-          .eq('id', prefixes.id);
+          .eq('id', id);
       } else {
         query = supabase
           .from('transaction_prefixes')
@@ -110,8 +144,7 @@ export function TransactionPrefixes() {
         description: "Transaction prefixes saved successfully!",
       });
 
-      // Refetch to get the updated data with ID
-      await fetchPrefixes();
+      await fetchPrefixes(targetUserId);
     } catch (error: any) {
       toast({
         title: "Error",
