@@ -2166,7 +2166,7 @@ export type Database = {
       promote_user_to_admin: { Args: { user_email: string }; Returns: string }
     }
     Enums: {
-      app_role: "admin" | "hr" | "sales" | "employee"
+      app_role: "admin" | "hr" | "sales" | "employee" | "superadmin"
       employee_sector:
         | "sales"
         | "accounts"
@@ -2301,7 +2301,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "hr", "sales", "employee"],
+      app_role: ["admin", "hr", "sales", "employee", "superadmin"],
       employee_sector: [
         "sales",
         "accounts",
