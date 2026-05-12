@@ -2163,6 +2163,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_superadmin: { Args: { _user_id: string }; Returns: boolean }
       promote_user_to_admin: { Args: { user_email: string }; Returns: string }
     }
     Enums: {
