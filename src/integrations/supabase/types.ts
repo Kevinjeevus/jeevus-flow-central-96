@@ -1982,6 +1982,105 @@ export type Database = {
         }
         Relationships: []
       }
+      user_invoice_formats: {
+        Row: {
+          accent_color: string | null
+          created_at: string | null
+          created_by: string | null
+          custom_footer_text: string | null
+          custom_signatory_name: string | null
+          custom_terms_text: string | null
+          font_size: string | null
+          format_name: string
+          id: string
+          invoice_title: string | null
+          orientation: string | null
+          paper_size: string | null
+          primary_color: string | null
+          show_amount_in_words: boolean | null
+          show_bank_details: boolean | null
+          show_company_address: boolean | null
+          show_company_logo: boolean | null
+          show_company_name: boolean | null
+          show_company_phone: boolean | null
+          show_discount_column: boolean | null
+          show_gst_column: boolean | null
+          show_gstin: boolean | null
+          show_hsn_column: boolean | null
+          show_hsn_summary: boolean | null
+          show_previous_due: boolean | null
+          show_signature: boolean | null
+          show_terms: boolean | null
+          show_unit_column: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          accent_color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          custom_footer_text?: string | null
+          custom_signatory_name?: string | null
+          custom_terms_text?: string | null
+          font_size?: string | null
+          format_name?: string
+          id?: string
+          invoice_title?: string | null
+          orientation?: string | null
+          paper_size?: string | null
+          primary_color?: string | null
+          show_amount_in_words?: boolean | null
+          show_bank_details?: boolean | null
+          show_company_address?: boolean | null
+          show_company_logo?: boolean | null
+          show_company_name?: boolean | null
+          show_company_phone?: boolean | null
+          show_discount_column?: boolean | null
+          show_gst_column?: boolean | null
+          show_gstin?: boolean | null
+          show_hsn_column?: boolean | null
+          show_hsn_summary?: boolean | null
+          show_previous_due?: boolean | null
+          show_signature?: boolean | null
+          show_terms?: boolean | null
+          show_unit_column?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          accent_color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          custom_footer_text?: string | null
+          custom_signatory_name?: string | null
+          custom_terms_text?: string | null
+          font_size?: string | null
+          format_name?: string
+          id?: string
+          invoice_title?: string | null
+          orientation?: string | null
+          paper_size?: string | null
+          primary_color?: string | null
+          show_amount_in_words?: boolean | null
+          show_bank_details?: boolean | null
+          show_company_address?: boolean | null
+          show_company_logo?: boolean | null
+          show_company_name?: boolean | null
+          show_company_phone?: boolean | null
+          show_discount_column?: boolean | null
+          show_gst_column?: boolean | null
+          show_gstin?: boolean | null
+          show_hsn_column?: boolean | null
+          show_hsn_summary?: boolean | null
+          show_previous_due?: boolean | null
+          show_signature?: boolean | null
+          show_terms?: boolean | null
+          show_unit_column?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
