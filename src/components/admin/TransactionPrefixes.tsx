@@ -163,6 +163,32 @@ export function TransactionPrefixes() {
 
   return (
     <div className="space-y-6">
+      {isSuperadmin && (
+        <div className="space-y-2 p-4 border rounded-lg bg-muted/30">
+          <Label htmlFor="target-user">Editing prefixes for user (Superadmin)</Label>
+          <Select value={targetUserId} onValueChange={setTargetUserId}>
+            <SelectTrigger id="target-user">
+              <SelectValue placeholder="Select user" />
+            </SelectTrigger>
+            <SelectContent>
+              {user && (
+                <SelectItem value={user.id}>Myself ({user.email})</SelectItem>
+              )}
+              {users
+                .filter((u) => u.user_id !== user?.id)
+                .map((u) => (
+                  <SelectItem key={u.user_id} value={u.user_id}>
+                    {u.full_name} — {u.email}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            As superadmin, you can manage transaction prefixes for any user, including admins.
+          </p>
+        </div>
+      )}
+
       {/* Firm Selection */}
       <div className="space-y-2">
         <Label htmlFor="firm-name">Firm</Label>
