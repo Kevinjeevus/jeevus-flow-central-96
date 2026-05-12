@@ -23,11 +23,20 @@ interface TransactionPrefixData {
   financial_year: string;
 }
 
+interface UserOption {
+  user_id: string;
+  full_name: string;
+  email: string;
+}
+
 export function TransactionPrefixes() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [padding, setPadding] = useState<number>(getNumberPadding());
+  const [isSuperadmin, setIsSuperadmin] = useState(false);
+  const [users, setUsers] = useState<UserOption[]>([]);
+  const [targetUserId, setTargetUserId] = useState<string>("");
   const [prefixes, setPrefixes] = useState<TransactionPrefixData>({
     firm_name: "JEEVUS NATURALS",
     sale_prefix: "INV/",
